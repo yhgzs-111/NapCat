@@ -30,6 +30,10 @@ export interface OB11Message {
     post_type?: EventType;
     raw?: RawMessage;
 }
+export interface OB11ArrayMessage extends OB11Message {
+    message_format: 'array';
+    message: OB11MessageData[];
+}
 
 // 合并转发消息接口定义
 export interface OB11ForwardMessage extends OB11Message {
