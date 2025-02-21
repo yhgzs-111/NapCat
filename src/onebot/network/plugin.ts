@@ -15,14 +15,14 @@ export class OB11PluginAdapter extends IOB11NetworkAdapter<PluginConfig> {
             messagePostFormat: 'array',
             reportSelfMessage: false,
             enable: true,
-            debug: false,
+            debug: true,
         };
         super(name, config, core, obContext, actions);
     }
 
     onEvent<T extends OB11EmitEventContent>(event: T) {
         if (event.post_type === 'message') {
-            plugin_onmessage(this.config.name, this.core, this.obContext, event as OB11Message, this.actions, this).then().catch();
+            plugin_onmessage(this.config.name, this.core, this.obContext, event as OB11Message, this.actions, this).then().catch(console.log);
         }
     }
 

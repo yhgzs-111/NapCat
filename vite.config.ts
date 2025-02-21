@@ -9,7 +9,8 @@ const external = [
     'ws',
     'express',
     '@ffmpeg.wasm/core-mt',
-    'piscina'
+    'piscina',
+    '@napi-rs/canvas'
 ];
 const nodeModules = [...builtinModules, builtinModules.map((m) => `node:${m}`)].flat();
 

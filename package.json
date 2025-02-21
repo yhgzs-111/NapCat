@@ -63,8 +63,10 @@
   },
   "dependencies": {
     "@ffmpeg.wasm/core-mt": "^0.13.2",
+    "@napi-rs/canvas": "^0.1.67",
     "compressing": "^1.10.1",
     "express": "^5.0.0",
+    "napcat.protobuf": "^1.1.2",
     "piscina": "^4.7.0",
     "silk-wasm": "^3.6.1",
     "ws": "^8.18.0"

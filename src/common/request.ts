@@ -109,7 +109,6 @@ export class RequestUtil {
             req.end();
         });
     }
-
     // 请求返回都是原始内容
     static async HttpGetText(url: string, method: string = 'GET', data?: any, headers: { [key: string]: string } = {}) {
         return this.HttpGetJson<string>(url, method, data, headers, false, false);

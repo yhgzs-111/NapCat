@@ -8,7 +8,8 @@ import { LRUCache } from '@/common/lru-cache';
 import { LogStack } from '@/core/packet/context/clientContext';
 import { NapCoreContext } from '@/core/packet/context/napCoreContext';
 import { PacketLogger } from '@/core/packet/context/loggerContext';
-
+import { ProtoBufDecode } from 'napcat.protobuf';
+export const MsgData = new LRUCache<string, string>(5000);
 // 0 send 1 recv
 export interface NativePacketExportType {
     InitHook?: (send: string, recv: string, callback: (type: number, uin: string, cmd: string, seq: number, hex_data: string) => void) => boolean;
@@ -54,6 +55,19 @@ export class NativePacketClient extends IPacketClient {
                 const callback = this.cb.get(trace_id + 'recv');
                 // console.log('callback:', callback, trace_id);
                 callback?.({ seq, cmd, hex_data });
+            }
+            if (cmd === 'trpc.msg.olpush.OlPushService.MsgPush') {
+                try {
+                    let msg_info = ProtoBufDecode(Buffer.from(hex_data, 'hex')) as any;
+                    let group_id = (msg_info['1']['1']['8']['1'] as number).toString()
+                    let msg_seq = (msg_info['1']['2']['5'] as number).toString()
+                    let msg_id = group_id + '_' + msg_seq;
+                    MsgData.put(msg_id, hex_data);
+                    console.log('add msgid:', msg_id);
+                } catch (error) {
+                    console.log('error:', error);
+                }
+
             }
         });
         this.available = true;
