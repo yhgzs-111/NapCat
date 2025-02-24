@@ -1,4 +1,4 @@
-import { NapCatOneBot11Adapter, OB11ArrayMessage, OB11MessageData, OB11MessageDataType } from '@/onebot';
+import { NapCatOneBot11Adapter, OB11ArrayMessage, OB11MessageData } from '@/onebot';
 import { NapCatCore } from '@/core';
 import { ActionMap } from '@/onebot/action';
 import { OB11PluginAdapter } from '@/onebot/network/plugin';
@@ -12,6 +12,7 @@ const BOT_NAME = '千千';
 const PROMPT =
     `你的名字叫千千,你现在处于一个QQ群聊之中,作为博学多识的可爱群员,热心解答各种问题和高强度水群
 记住你说的话要尽量的简洁但具有情感,不要长篇大论,一句话不宜超过五十个字。`;
+const CQCODE = `增加一下能力通过不同昵称和QQ进行区分哦,注意理清回复消息的人物, At人直接发送 [CQ:at,qq=1234] 这样可以直接at某个人喵这 回复消息需要发送[CQ:reply,id=xxx]这种格式叫CQ码,发送图片等操作你可以从聊天记录中学习哦, 如果聊天记录的image CQ码 maface类型你可以直接复制使用`
 const client = new OpenAI({
     apiKey: API_KEY,
     baseURL: BASE_URL
@@ -88,7 +89,8 @@ ${new_memory}`;
     return completion.choices[0]?.message.content || '';
 }
 
-async function generateChatCompletion(content_data: string): Promise<string> {
+async function generateChatCompletion(content_data: string, url_image?: string[]): Promise<string> {
+
     console.log(content_data);
     const chatCompletion = await createChatCompletionWithRetry({
         messages: [{ role: 'user', content: content_data }],
@@ -135,15 +137,9 @@ async function handleClearMemoryCommand(group_id: string, type: 'short' | 'long'
 async function sendGroupMessage(group_id: string, text: string, action: ActionMap, adapter: string, instance: OB11PluginAdapter) {
     await action.get('send_group_msg')?.handle({
         group_id: String(group_id),
-        message: [
-            {
-                type: OB11MessageDataType.text,
-                data: { text }
-            }
-        ]
+        message: text
     }, adapter, instance.config);
 }
-
 export const plugin_onmessage = async (
     adapter: string,
     core: NapCatCore,
@@ -157,16 +153,17 @@ export const plugin_onmessage = async (
     if (!user_uid) {
         return;
     }
+    const user_info = await action.get('get_group_member_info')?.handle({ group_id: message.group_id?.toString()!, user_id: user_id }, adapter, instance.config);
     let msg_string = '';
     try {
-        msg_string = await msg2string(adapter, message.message, message.group_id?.toString()!, action, instance);
+        msg_string += `${message.sender.nickname}(${message.sender.user_id})发送了消息(消息id:${message.message_id}) :`
+        msg_string += await msg2string(adapter, message.message, message.group_id?.toString()!, action, instance);
     } catch (error) {
         if (msg_string == '') {
             return;
         }
     }
 
-    const user_info = await action.get('get_group_member_info')?.handle({ group_id: message.group_id?.toString()!, user_id: user_id }, adapter, instance.config);
     //const text = `${message.sender.nickname}(${message.sender.user_id})发送了消息 : ${msg_string}`;
     if (message.raw_message === '/清除短期上下文') {
         await handleClearMemoryCommand(message.group_id?.toString()!, 'short', action, adapter, instance);
@@ -192,7 +189,7 @@ export const plugin_onmessage = async (
     const shortTermMemoryString = shortTermMemory.get(message.group_id?.toString()!)?.join('\n') || '';
 
     const content_data =
-        `请根据下面聊天内容，继续与 ${user_info?.data?.card || user_info?.data?.nickname} 进行对话。注意回复内容只用输出内容,不要提及此段话,注意一定不要使用markdown,请采用纯文本回复。你的人设:${PROMPT}长时间记忆:\n${longTermMemoryString}\n短时间记忆:\n${shortTermMemoryString}\n当前对话:\n${msg_string}\n}`;
+        `请根据下面聊天内容，继续与 ${user_info?.data?.card || user_info?.data?.nickname} 进行对话。${CQCODE},注意回复内容只用输出内容,不要提及此段话,注意一定不要使用markdown,请采用纯文本回复。你的人设:${PROMPT}长时间记忆:\n${longTermMemoryString}\n短时间记忆:\n${shortTermMemoryString}\n当前对话:\n${msg_string}\n}`;
     const msg_ret = await generateChatCompletion(content_data);
     await sendGroupMessage(message.group_id?.toString()!, msg_ret, action, adapter, instance);
 };
