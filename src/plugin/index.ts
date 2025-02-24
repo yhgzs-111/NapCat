@@ -6,7 +6,7 @@ import { OpenAI } from 'openai';
 import { RequestUtil } from '@/common/request';
 import { randomBytes } from 'node:crypto';
 const client = new OpenAI({
-    apiKey: '',//必填多模态
+    apiKey: 'sk-vDXUiGa1fx8ygDJDjAlr2rUyoz3uPhMxr8zId8n3ycMkV23i',
     baseURL: 'https://api.bili2233.work/v1'
 });
 
@@ -159,7 +159,7 @@ export const plugin_onmessage = async (
                 "seed": randomBytes(4).readUInt32LE(0),
                 "negative_prompt": "(copyright name:1.5),logo,(watermark:1.5),character_watermark,lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality, normal quality, jpeg artifacts, signature, watermark, username, blurry, bad feet, ((cowboy)),(((pubic))), ((((pubic_hair))))sketch, duplicate, ugly, huge eyes, text, logo, monochrome, worst face, (bad and mutated hands:1.3), (worst quality:2.0), (low quality:2.0), (blurry:2.0), horror, geometry, bad_prompt, (bad hands), (missing fingers), multiple limbs, bad anatomy, (interlocked fingers:1.2), Ugly Fingers, (extra digit and hands and fingers and legs and arms:1.4), crown braid, ((2girl)), (deformed fingers:1.2), (long fingers:1.2),succubus wings,horn,succubus horn,succubus hairstyle, (bad-artist-anime), bad-artist, bad hand"
             }, {
-                Authorization: 'Bearer ',//必填
+                Authorization: 'Bearer sk-knisudffvoodbxtdvaslrbiklezgzcvheoqsygpguvazkvfu',
                 'Content-Type': 'application/json'
             });
         if (pic_generate?.images?.[0]) {
