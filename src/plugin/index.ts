@@ -39,8 +39,9 @@ async function msg2string(adapter: string, msg: OB11MessageData[], group_id: str
     let ret = '';
     for (const m of msg) {
         if (m.type === 'reply') {
-            const msgcontext = await action.get('get_msg')?._handle({ message_id: m.data.id }, adapter, plugin.config);
-            ret += `[CQ:reply,id=${m.data.id},orimsg=${msgcontext}]`;
+            // const msgcontext = await action.get('get_msg')?._handle({ message_id: m.data.id }, adapter, plugin.config);
+            // let = msg2string(adapter, msgcontext?.message as OB11MessageData[], group_id, action, plugin);
+            ret += `[CQ:reply,id=${m.data.id}]`;
         } else if (m.type === 'text') {
             ret += m.data.text;
         } else if (m.type === 'at') {
@@ -110,7 +111,7 @@ async function generateChatCompletion(content_data: string, url_image?: string[]
     }
     console.log(messages);
     const chatCompletion = await createChatCompletionWithRetry({
-        messages: messages,
+        messages: [messages],
         model: MODEL
     });
     return chatCompletion.choices[0]?.message.content || '';
