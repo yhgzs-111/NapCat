@@ -1,5 +1,5 @@
-import { NapCatOneBot11Adapter, OB11ArrayMessage, OB11MessageDataType } from '@/onebot';
-import { NapCatCore, RawMessage } from '@/core';
+import { NapCatOneBot11Adapter, OB11ArrayMessage, OB11MessageData, OB11MessageDataType } from '@/onebot';
+import { NapCatCore } from '@/core';
 import { ActionMap } from '@/onebot/action';
 import { OB11PluginAdapter } from '@/onebot/network/plugin';
 import { OpenAI } from 'openai';
@@ -32,21 +32,25 @@ async function createChatCompletionWithRetry(params: any, retries: number = 3): 
     }
 }
 
-async function handleMessage2String(message: RawMessage): Promise<string> {
-    let data = '';
-    for (let element of message.elements) {
-        if (element.textElement) {
-            data += element.textElement.content.replaceAll('->', '').replaceAll('<-', '');
-        }
-        if (element.replyElement) {
-            const records = message.records.find(msgRecord => msgRecord.msgId === element.replyElement?.sourceMsgIdInRecords);
-            if (records) {
-                data += '[Reply] 回应内容 源消息[' + await handleMessage2String(records) + ']';
-            }
+async function msg2string(adapter: string, msg: OB11MessageData[], group_id: string, action: ActionMap, plugin: OB11PluginAdapter): Promise<string> {
+    let ret = '';
+    for (const m of msg) {
+        if (m.type === 'reply') {
+            const msgcontext = await action.get('get_msg')?._handle({ message_id: m.data.id }, adapter, plugin.config);
+            ret += `[CQ:reply,id=${m.data.id},orimsg=${msgcontext}]`;
+        } else if (m.type === 'text') {
+            ret += m.data.text;
+        } else if (m.type === 'at') {
+            const memberInfo = await action.get('get_group_member_info')
+                ?.handle({ group_id: group_id, user_id: m.data.qq }, adapter, plugin.config);
+            ret += `[CQ:at=${m.data.qq},name=${memberInfo?.data?.nickname}]`;
+        } else if (m.type === 'image') {
+            ret += '[CQ:image,file=' + m.data.url + ']';
+        } else if (m.type === 'face') {
+            ret += '[CQ:face,id=' + m.data.id + ']';
         }
     }
-    if (data.length === 0) throw new Error('消息为空');
-    return (message.sendMemberName || message.sendNickName) + ' 说: ->' + data + '<- ';
+    return ret;
 }
 
 function updateMemoryLayer(memoryLayer: Map<string, string[]>, group_id: string, newMessages: string[]) {
@@ -155,7 +159,7 @@ export const plugin_onmessage = async (
     }
     let msg_string = '';
     try {
-        msg_string = await handleMessage2String(message.raw!);
+        msg_string = await msg2string(adapter, message.message, message.group_id?.toString()!, action, instance);
     } catch (error) {
         if (msg_string == '') {
             return;
