@@ -39,8 +39,6 @@ async function msg2string(adapter: string, msg: OB11MessageData[], group_id: str
     let ret = '';
     for (const m of msg) {
         if (m.type === 'reply') {
-            // const msgcontext = await action.get('get_msg')?._handle({ message_id: m.data.id }, adapter, plugin.config);
-            // let = msg2string(adapter, msgcontext?.message as OB11MessageData[], group_id, action, plugin);
             ret += `[CQ:reply,id=${m.data.id}]`;
         } else if (m.type === 'text') {
             ret += m.data.text;
@@ -104,12 +102,12 @@ async function generateChatCompletion(content_data: string, url_image?: string[]
             messages.content.push({
                 type: 'image_url',
                 image_url: {
-                    url: url
+                    url: url.replace('https://', 'http://')
                 }
             });
         });
     }
-    console.log(messages);
+    console.log(JSON.stringify(messages, null, 2));
     const chatCompletion = await createChatCompletionWithRetry({
         messages: [messages],
         model: MODEL
@@ -153,7 +151,7 @@ async function handleClearMemoryCommand(group_id: string, type: 'short' | 'long'
 }
 
 async function sendGroupMessage(group_id: string, text: string, action: ActionMap, adapter: string, instance: OB11PluginAdapter) {
-    await action.get('send_group_msg')?.handle({
+    return await action.get('send_group_msg')?.handle({
         group_id: String(group_id),
         message: text
     }, adapter, instance.config);
@@ -172,15 +170,16 @@ async function handleMessage(message: OB11ArrayMessage, adapter: string, action:
     return msg_string;
 }
 
-async function handleChatResponse(message: OB11ArrayMessage, msg_string: string, adapter: string, action: ActionMap, instance: OB11PluginAdapter, core: NapCatCore) {
+async function handleChatResponse(message: OB11ArrayMessage, msg_string: string, adapter: string, action: ActionMap, instance: OB11PluginAdapter, _core: NapCatCore) {
     const longTermMemoryString = longTermMemory.get(message.group_id?.toString()!) || '';
     const shortTermMemoryString = shortTermMemory.get(message.group_id?.toString()!)?.join('\n') || '';
     const user_info = await action.get('get_group_member_info')?.handle({ group_id: message.group_id?.toString()!, user_id: message.sender.user_id }, adapter, instance.config);
     const content_data =
         `请根据下面聊天内容，继续与 ${user_info?.data?.card || user_info?.data?.nickname} 进行对话。${CQCODE},注意回复内容只用输出内容,不要提及此段话,注意一定不要使用markdown,请采用纯文本回复。你的人设:${PROMPT}长时间记忆:\n${longTermMemoryString}\n短时间记忆:\n${shortTermMemoryString}\n当前对话:\n${msg_string}\n}`;
     const msg_ret = await generateChatCompletion(content_data, message.message.filter(e => e.type === 'image').map(e => e.data.url!));
-    await sendGroupMessage(message.group_id?.toString()!, msg_ret, action, adapter, instance);
+    let msg = await sendGroupMessage(message.group_id?.toString()!, msg_ret, action, adapter, instance);
     chatHot.set(message.group_id?.toString()!, (chatHot.get(message.group_id?.toString()!) || 0) + 3);
+    return msg?.data?.message_id;
 }
 
 export const plugin_onmessage = async (
@@ -194,6 +193,16 @@ export const plugin_onmessage = async (
     const current_hot = chatHot.get(message.group_id?.toString()!) || 0;
     const orimsgid = message.message.find(e => e.type == 'reply')?.data.id;
     const orimsg = orimsgid ? await action.get('get_msg')?._handle({ message_id: orimsgid }, adapter, instance.config) : undefined;
+
+    if (message.raw_message === '/清除短期上下文') {
+        await handleClearMemoryCommand(message.group_id?.toString()!, 'short', action, adapter, instance);
+        return;
+    }
+
+    if (message.raw_message === '/清除长期上下文') {
+        await handleClearMemoryCommand(message.group_id?.toString()!, 'long', action, adapter, instance);
+        return;
+    }
 
     if (
         !message.raw_message.startsWith(BOT_NAME) &&
@@ -221,16 +230,7 @@ export const plugin_onmessage = async (
     const msg_string = await handleMessage(message, adapter, action, instance);
     if (!msg_string) return;
 
-    if (message.raw_message === '/清除短期上下文') {
-        await handleClearMemoryCommand(message.group_id?.toString()!, 'short', action, adapter, instance);
-        return;
-    }
-
-    if (message.raw_message === '/清除长期上下文') {
-        await handleClearMemoryCommand(message.group_id?.toString()!, 'long', action, adapter, instance);
-        return;
-    }
-
     await updateMemory(message.group_id?.toString()!, msg_string);
-    await handleChatResponse(message, msg_string, adapter, action, instance, core);
+    let sended_msg = await handleChatResponse(message, msg_string, adapter, action, instance, core);
+    await updateMemory(message.group_id?.toString()!, `乔千(${core.selfInfo.uin})发送了消息(消息id:${sended_msg}) :` + msg_string);
 };
