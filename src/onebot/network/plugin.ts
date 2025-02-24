@@ -1,5 +1,5 @@
 import { OB11EmitEventContent, OB11NetworkReloadType } from './index';
-import { NapCatOneBot11Adapter, OB11ArrayMessage, OB11Message } from '@/onebot';
+import { NapCatOneBot11Adapter, OB11ArrayMessage } from '@/onebot';
 import { NapCatCore } from '@/core';
 import { PluginConfig } from '../config/config';
 import { plugin_onmessage } from '@/plugin';
@@ -15,7 +15,7 @@ export class OB11PluginAdapter extends IOB11NetworkAdapter<PluginConfig> {
             messagePostFormat: 'array',
             reportSelfMessage: false,
             enable: true,
-            debug: false,
+            debug: true,
         };
         super(name, config, core, obContext, actions);
     }
