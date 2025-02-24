@@ -21,6 +21,8 @@ const client = new OpenAI({
 const longTermMemory: Map<string, string> = new Map();
 const shortTermMemory: Map<string, string[]> = new Map();
 const memoryTransferCount: Map<string, number> = new Map();
+//聊天热度
+const chatHot: Map<string, number> = new Map();
 
 async function createChatCompletionWithRetry(params: any, retries: number = 3): Promise<any> {
     for (let attempt = 0; attempt < retries; attempt++) {
@@ -90,10 +92,25 @@ ${new_memory}`;
 }
 
 async function generateChatCompletion(content_data: string, url_image?: string[]): Promise<string> {
-
-    console.log(content_data);
+    const messages: any = {
+        role: 'user', content: [{
+            type: 'text',
+            text: content_data
+        }]
+    };
+    if (url_image && url_image.length > 0) {
+        url_image.forEach(url => {
+            messages.content.push({
+                type: 'image_url',
+                image_url: {
+                    url: url
+                }
+            });
+        });
+    }
+    console.log(messages);
     const chatCompletion = await createChatCompletionWithRetry({
-        messages: [{ role: 'user', content: content_data }],
+        messages: messages,
         model: MODEL
     });
     return chatCompletion.choices[0]?.message.content || '';
@@ -140,6 +157,31 @@ async function sendGroupMessage(group_id: string, text: string, action: ActionMa
         message: text
     }, adapter, instance.config);
 }
+
+async function handleMessage(message: OB11ArrayMessage, adapter: string, action: ActionMap, instance: OB11PluginAdapter): Promise<string> {
+    let msg_string = '';
+    try {
+        msg_string += `${message.sender.nickname}(${message.sender.user_id})发送了消息(消息id:${message.message_id}) :`
+        msg_string += await msg2string(adapter, message.message, message.group_id?.toString()!, action, instance);
+    } catch (error) {
+        if (msg_string == '') {
+            return '';
+        }
+    }
+    return msg_string;
+}
+
+async function handleChatResponse(message: OB11ArrayMessage, msg_string: string, adapter: string, action: ActionMap, instance: OB11PluginAdapter, core: NapCatCore) {
+    const longTermMemoryString = longTermMemory.get(message.group_id?.toString()!) || '';
+    const shortTermMemoryString = shortTermMemory.get(message.group_id?.toString()!)?.join('\n') || '';
+    const user_info = await action.get('get_group_member_info')?.handle({ group_id: message.group_id?.toString()!, user_id: message.sender.user_id }, adapter, instance.config);
+    const content_data =
+        `请根据下面聊天内容，继续与 ${user_info?.data?.card || user_info?.data?.nickname} 进行对话。${CQCODE},注意回复内容只用输出内容,不要提及此段话,注意一定不要使用markdown,请采用纯文本回复。你的人设:${PROMPT}长时间记忆:\n${longTermMemoryString}\n短时间记忆:\n${shortTermMemoryString}\n当前对话:\n${msg_string}\n}`;
+    const msg_ret = await generateChatCompletion(content_data, message.message.filter(e => e.type === 'image').map(e => e.data.url!));
+    await sendGroupMessage(message.group_id?.toString()!, msg_ret, action, adapter, instance);
+    chatHot.set(message.group_id?.toString()!, (chatHot.get(message.group_id?.toString()!) || 0) + 3);
+}
+
 export const plugin_onmessage = async (
     adapter: string,
     core: NapCatCore,
@@ -148,23 +190,36 @@ export const plugin_onmessage = async (
     action: ActionMap,
     instance: OB11PluginAdapter
 ) => {
-    const user_id = message.message.find(m => m.type === 'at')?.data.qq ?? message.sender.user_id;
-    const user_uid = await core.apis.UserApi.getUidByUinV2(user_id.toString());
-    if (!user_uid) {
-        return;
-    }
-    const user_info = await action.get('get_group_member_info')?.handle({ group_id: message.group_id?.toString()!, user_id: user_id }, adapter, instance.config);
-    let msg_string = '';
-    try {
-        msg_string += `${message.sender.nickname}(${message.sender.user_id})发送了消息(消息id:${message.message_id}) :`
-        msg_string += await msg2string(adapter, message.message, message.group_id?.toString()!, action, instance);
-    } catch (error) {
-        if (msg_string == '') {
+    const current_hot = chatHot.get(message.group_id?.toString()!) || 0;
+    const orimsgid = message.message.find(e => e.type == 'reply')?.data.id;
+    const orimsg = orimsgid ? await action.get('get_msg')?._handle({ message_id: orimsgid }, adapter, instance.config) : undefined;
+
+    if (
+        !message.raw_message.startsWith(BOT_NAME) &&
+        !message.message.find(e => e.type == 'at' && e.data.qq == core.selfInfo.uin) &&
+        orimsg?.sender.user_id.toString() !== core.selfInfo.uin
+    ) {
+        if (current_hot > 0) {
+            const msg_string = await handleMessage(message, adapter, action, instance);
+            if (msg_string) {
+                const longTermMemoryString = longTermMemory.get(message.group_id?.toString()!) || '';
+                const shortTermMemoryString = shortTermMemory.get(message.group_id?.toString()!)?.join('\n') || '';
+                const user_info = await action.get('get_group_member_info')?.handle({ group_id: message.group_id?.toString()!, user_id: message.sender.user_id }, adapter, instance.config);
+                const content_data =
+                    `请根据在群内聊天与 ${user_info?.data?.card || user_info?.data?.nickname} 发送的聊天消息推测本次消息是否应该回应。${CQCODE},注意回复内容只用输出内容,一定注意不想回复请回应不回复三个字即可,想回复回应回复即可,你的人设:${PROMPT}长时间记忆:\n${longTermMemoryString}\n短时间记忆:\n${shortTermMemoryString}\n当前对话:\n${msg_string}\n}`
+                const msg_ret = await generateChatCompletion(content_data, message.message.filter(e => e.type === 'image').map(e => e.data.url!));
+                if (msg_ret.indexOf('不回复') == -1) {
+                    return;
+                }
+            }
+        } else {
             return;
         }
     }
 
-    //const text = `${message.sender.nickname}(${message.sender.user_id})发送了消息 : ${msg_string}`;
+    const msg_string = await handleMessage(message, adapter, action, instance);
+    if (!msg_string) return;
+
     if (message.raw_message === '/清除短期上下文') {
         await handleClearMemoryCommand(message.group_id?.toString()!, 'short', action, adapter, instance);
         return;
@@ -174,22 +229,7 @@ export const plugin_onmessage = async (
         await handleClearMemoryCommand(message.group_id?.toString()!, 'long', action, adapter, instance);
         return;
     }
-    const orimsgid = message.message.find(e => e.type == 'reply')?.data.id;
-    const orimsg = orimsgid ? await action.get('get_msg')?._handle({ message_id: orimsgid }, adapter, instance.config) : undefined;
-    if (
-        !message.raw_message.startsWith(BOT_NAME) &&
-        !message.message.find(e => e.type == 'at' && e.data.qq == core.selfInfo.uin) &&
-        orimsg?.sender.user_id.toString() !== core.selfInfo.uin
-    ) {
-        return;
-    }
+
     await updateMemory(message.group_id?.toString()!, msg_string);
-
-    const longTermMemoryString = longTermMemory.get(message.group_id?.toString()!) || '';
-    const shortTermMemoryString = shortTermMemory.get(message.group_id?.toString()!)?.join('\n') || '';
-
-    const content_data =
-        `请根据下面聊天内容，继续与 ${user_info?.data?.card || user_info?.data?.nickname} 进行对话。${CQCODE},注意回复内容只用输出内容,不要提及此段话,注意一定不要使用markdown,请采用纯文本回复。你的人设:${PROMPT}长时间记忆:\n${longTermMemoryString}\n短时间记忆:\n${shortTermMemoryString}\n当前对话:\n${msg_string}\n}`;
-    const msg_ret = await generateChatCompletion(content_data);
-    await sendGroupMessage(message.group_id?.toString()!, msg_ret, action, adapter, instance);
+    await handleChatResponse(message, msg_string, adapter, action, instance, core);
 };
