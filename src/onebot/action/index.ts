@@ -106,6 +106,8 @@ import { SendPoke } from '@/onebot/action/packet/SendPoke';
 import { SetDiyOnlineStatus } from './extends/SetDiyOnlineStatus';
 import { BotExit } from './extends/BotExit';
 import { ClickInlineKeyboardButton } from './extends/ClickInlineKeyboardButton';
+import { GetPrivateFileUrl } from './file/GetPrivateFileUrl';
+import { GetUnidirectionalFriendList } from './extends/GetUnidirectionalFriendList';
 
 export function createActionMap(obContext: NapCatOneBot11Adapter, core: NapCatCore) {
 
@@ -225,6 +227,8 @@ export function createActionMap(obContext: NapCatOneBot11Adapter, core: NapCatCo
         new GetGroupSystemMsg(obContext, core),
         new BotExit(obContext, core),
         new ClickInlineKeyboardButton(obContext, core),
+        new GetPrivateFileUrl(obContext,core),
+        new GetUnidirectionalFriendList(obContext,core),
     ];
 
     type HandlerUnion = typeof actionHandlers[number];

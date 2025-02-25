@@ -9,7 +9,6 @@ const external = [
     'ws',
     'express',
     '@ffmpeg.wasm/core-mt',
-    'piscina',
     'openai'
 ];
 const nodeModules = [...builtinModules, builtinModules.map((m) => `node:${m}`)].flat();

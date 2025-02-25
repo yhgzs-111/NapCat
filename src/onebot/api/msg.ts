@@ -132,7 +132,6 @@ export class OneBotMsgApi {
                         file: element.fileName,
                         sub_type: element.picSubType,
                         url: await this.core.apis.FileApi.getImageUrl(element),
-                        path: element.filePath,
                         file_size: element.fileSize,
                     },
                 };
@@ -148,13 +147,13 @@ export class OneBotMsgApi {
                 peerUid: msg.peerUid,
                 guildId: '',
             };
-            const file = FileNapCatOneBotUUID.encode(peer, msg.msgId, elementWrapper.elementId, element.fileUuid, element.fileName);
+            FileNapCatOneBotUUID.encode(peer, msg.msgId, elementWrapper.elementId, element.fileUuid, element.fileUuid);
+            FileNapCatOneBotUUID.encode(peer, msg.msgId, elementWrapper.elementId, element.fileUuid, element.fileName);
             return {
                 type: OB11MessageDataType.file,
                 data: {
-                    file: file,
-                    path: element.filePath,
-                    file_id: file,
+                    file: element.fileName,
+                    file_id: element.fileUuid,
                     file_size: element.fileSize,
                 },
             };
@@ -216,7 +215,6 @@ export class OneBotMsgApi {
                 data: {
                     summary: _.faceName, // 商城表情名称
                     file: filename,
-                    path: url,
                     url: url,
                     key: _.key,
                     emoji_id: _.emojiId,
@@ -339,7 +337,6 @@ export class OneBotMsgApi {
                 type: OB11MessageDataType.video,
                 data: {
                     file: fileCode,
-                    path: videoDownUrl,
                     url: videoDownUrl,
                     file_size: element.fileSize,
                 },
@@ -357,7 +354,6 @@ export class OneBotMsgApi {
                 type: OB11MessageDataType.voice,
                 data: {
                     file: fileCode,
-                    path: element.filePath,
                     file_size: element.fileSize,
                 },
             };
@@ -658,6 +654,19 @@ export class OneBotMsgApi {
         [OB11MessageDataType.node]: async () => undefined,
 
         [OB11MessageDataType.forward]: async ({ data }, context) => {
+            // let id = data.id.toString();
+            // let peer: Peer | undefined = context.peer;
+            // if (isNumeric(id)) {
+            //     let msgid = '';
+            //     if (BigInt(data.id) > 2147483647n) {
+            //         peer = MessageUnique.getPeerByMsgId(id)?.Peer;
+            //         msgid = id;
+            //     } else {
+            //         let data = MessageUnique.getMsgIdAndPeerByShortId(parseInt(id));
+            //         msgid = data?.MsgId ?? '';
+            //         peer = data?.Peer;
+            //     }
+            // }
             const jsonData = ForwardMsgBuilder.fromResId(data.id);
             return this.ob11ToRawConverters.json({
                 data: { data: JSON.stringify(jsonData) },
