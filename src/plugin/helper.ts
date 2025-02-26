@@ -5,6 +5,5 @@ export async function toSingleRole(msg: Array<any>) {
     for (const m of msg) {
         ret.content.push(...m.content as any)
     }
-    console.log(JSON.stringify(ret, null, 2));
     return [ret] as Array<ChatCompletionMessageParam>;
 }

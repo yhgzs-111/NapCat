@@ -1,5 +1,7 @@
 import { Mutex } from "async-mutex";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { ChatCompletionContentPart } from "openai/resources";
+import { MEMORY_FILE } from "./config";
 
 export class MemoryManager {
     private longTermMemory: Map<string, string> = new Map();
@@ -11,6 +13,8 @@ export class MemoryManager {
 
     constructor(mergeAndUpdateMemory: (currentMemory: Array<ChatCompletionContentPart>[], newMessages: Array<ChatCompletionContentPart>[]) => Promise<string>) {
         this.mergeAndUpdateMemory = mergeAndUpdateMemory;
+        this.loadFromJson(MEMORY_FILE);
+        setInterval(() => this.saveFromJson(MEMORY_FILE), 1000 * 60 * 5);
     }
 
     async updateMemory(
@@ -20,13 +24,11 @@ export class MemoryManager {
     ) {
         const currentMemory = this.shortTermMemory.get(groupId) || [];
         const memCount = await this.incrementMemoryCount(groupId);
-        console.log('memCount', memCount);
         currentMemory.push(...newMessages);
 
         if (memCount > this.SHORT_TERM_MEMORY_LIMIT) {
             await this.handleMemoryOverflow(groupId, currentMemory, newMessages, selfuin);
         }
-
         this.shortTermMemory.set(groupId, currentMemory);
     }
 
@@ -73,5 +75,28 @@ export class MemoryManager {
 
     getShortTermMemory(groupId: string): Array<ChatCompletionContentPart>[] {
         return this.shortTermMemory.get(groupId) || [];
+    }
+
+    toJson() {
+        return {
+            longTermMemory: Array.from(this.longTermMemory.entries()),
+            shortTermMemory: Array.from(this.shortTermMemory.entries()),
+            memoryCount: Array.from(this.memoryCount.entries())
+        }
+    }
+
+    saveFromJson(file: string) {
+        let json = JSON.stringify(this.toJson(), null, 2);
+        writeFileSync(file, json);
+    }
+
+    loadFromJson(file: string) {
+        if (existsSync(file)) {
+            let json = readFileSync(file, { encoding: 'utf-8' });
+            let obj = JSON.parse(json);
+            this.longTermMemory = new Map(obj.longTermMemory);
+            this.shortTermMemory = new Map(obj.shortTermMemory);
+            this.memoryCount = new Map(obj.memoryCount);
+        }
     }
 }

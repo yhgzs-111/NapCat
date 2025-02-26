@@ -18,7 +18,7 @@ async function createChatCompletionWithRetry(params: any, retries: number = 5): 
         try {
             return await client.chat.completions.create(params);
         } catch (error) {
-            console.error(`Attempt ${attempt + 1} failed:`, error);
+            console.error(`Ai会话 ${attempt + 1} failed:`, error);
             if (attempt === retries - 1) throw error;
         }
     }
@@ -103,16 +103,18 @@ async function handleChatResponse(message: OB11ArrayMessage, msgArray: Array<Cha
     return { id: sentMsg?.data?.message_id, text: msgRet };
 }
 
-async function shouldRespond(message: OB11ArrayMessage, core: NapCatCore, oriMsg: any, currentHot: number, msgArray: Array<ChatCompletionContentPart>, reply?: Array<ChatCompletionContentPart>): Promise<boolean> {
+async function shouldRespond(message: OB11ArrayMessage, core: NapCatCore, oriMsg: any, currentHot: boolean, msgArray: Array<ChatCompletionContentPart>, reply?: Array<ChatCompletionContentPart>): Promise<boolean> {
     if (
         !message.raw_message.startsWith(BOT_NAME) &&
         !message.message.find(e => e.type == 'at' && e.data.qq == core.selfInfo.uin) &&
         oriMsg?.sender.user_id.toString() !== core.selfInfo.uin
     ) {
-        if (currentHot > 0 && msgArray.length > 0) {
-            const prompt = `请根据在群内聊天与 ${message.sender.card || message.sender?.nickname} 发送的聊天消息推测本次消息是否应该回应。自身无关的话题和图片不要回复,尤其减少对图片消息的回复可能性, 注意回复内容只用输出2 - 3个字, 一定注意不想回复请回应不回复三个字即可, 想回复回应回复即可, 你的人设:${PROMPT}`;
+        console.log("聊天热度", currentHot ? '热度高' : '热度低');
+        if (currentHot && msgArray.length > 0) {
+            const prompt = `请根据在群内聊天与 ${message.sender.card || message.sender?.nickname} 发送的聊天消息推测本次消息是否应该回复。在上下文关系并非强相关的话题和图片不要随意回复,根据上下文非常明显需要时才进行回复,否则不回复,注意尤其减少对图片消息的回应可能性, 注意回复内容只用输出2 - 3个字, 一定注意不想回复请输出不回复三个字即可, 想回复输出回复即可,一定不要给出现任何多余的字, 你的人设:${PROMPT}`;
             const contentData = await prepareContentData(message, msgArray, prompt, reply);
             const msgRet = await generateChatCompletion(contentData);
+            console.log('Ai回应判断:' + msgRet)
             if (msgRet.indexOf('不回复') !== -1) {
                 return false;
             }
@@ -144,8 +146,7 @@ export const plugin_onmessage = async (
     action: ActionMap,
     instance: OB11PluginAdapter
 ) => {
-    const currentHot = await chatHotManager.getHotData(message.group_id?.toString()!);
-    console.log('currentHot', currentHot);
+    const currentHot = await chatHotManager.getHot(message.group_id?.toString()!);
     const oriMsgId = message.message.find(e => e.type == 'reply')?.data.id;
     const oriMsg = (oriMsgId ? await action.get('get_msg')?._handle({ message_id: oriMsgId }, adapter, instance.config) : undefined) as OB11ArrayMessage | undefined;
     const msgArray = await messageToOpenAi(adapter, message.message, message.group_id?.toString()!, action, instance, message);
