@@ -355,6 +355,7 @@ export class OneBotMsgApi {
                 data: {
                     file: fileCode,
                     file_size: element.fileSize,
+                    path: element.filePath,
                 },
             };
         },
@@ -654,6 +655,19 @@ export class OneBotMsgApi {
         [OB11MessageDataType.node]: async () => undefined,
 
         [OB11MessageDataType.forward]: async ({ data }, context) => {
+            // let id = data.id.toString();
+            // let peer: Peer | undefined = context.peer;
+            // if (isNumeric(id)) {
+            //     let msgid = '';
+            //     if (BigInt(data.id) > 2147483647n) {
+            //         peer = MessageUnique.getPeerByMsgId(id)?.Peer;
+            //         msgid = id;
+            //     } else {
+            //         let data = MessageUnique.getMsgIdAndPeerByShortId(parseInt(id));
+            //         msgid = data?.MsgId ?? '';
+            //         peer = data?.Peer;
+            //     }
+            // }
             const jsonData = ForwardMsgBuilder.fromResId(data.id);
             return this.ob11ToRawConverters.json({
                 data: { data: JSON.stringify(jsonData) },
@@ -795,6 +809,7 @@ export class OneBotMsgApi {
             message_id: msg.id!,
             message_seq: msg.id!,
             real_id: msg.id!,
+            real_seq: msg.msgSeq,
             message_type: msg.chatType == ChatType.KCHATTYPEGROUP ? 'group' : 'private',
             sender: {
                 user_id: +(msg.senderUin ?? 0),

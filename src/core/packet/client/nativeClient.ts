@@ -12,7 +12,7 @@ import { ProtoBufDecode } from 'napcat.protobuf';
 export const MsgData = new LRUCache<string, string>(5000);
 // 0 send 1 recv
 export interface NativePacketExportType {
-    InitHook?: (send: string, recv: string, callback: (type: number, uin: string, cmd: string, seq: number, hex_data: string) => void) => boolean;
+    InitHook?: (send: string, recv: string, callback: (type: number, uin: string, cmd: string, seq: number, hex_data: string) => void, o3_hook: boolean) => boolean;
     SendPacket?: (cmd: string, data: string, trace_id: string) => void;
 }
 
@@ -43,6 +43,7 @@ export class NativePacketClient extends IPacketClient {
         const platform = process.platform + '.' + process.arch;
         const moehoo_path = path.join(dirname(fileURLToPath(import.meta.url)), './moehoo/MoeHoo.' + platform + '.node');
         process.dlopen(this.MoeHooExport, moehoo_path, constants.dlopen.RTLD_LAZY);
+        
         this.MoeHooExport.exports.InitHook?.(send, recv, (type: number, uin: string, cmd: string, seq: number, hex_data: string) => {
             const trace_id = createHash('md5').update(Buffer.from(hex_data, 'hex')).digest('hex');
             if (type === 0 && this.cb.get(trace_id + 'recv')) {
@@ -69,7 +70,7 @@ export class NativePacketClient extends IPacketClient {
                 }
 
             }
-        });
+        }, this.napcore.config.o3HookMode == 1);
         this.available = true;
     }
 

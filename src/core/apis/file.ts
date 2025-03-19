@@ -41,7 +41,8 @@ export class NTQQFileApi {
         this.context = context;
         this.core = core;
         this.rkeyManager = new RkeyManager([
-            'https://rkey.napneko.icu/rkeys'
+            'https://ss.xingzhige.com/music_card/rkey', // 国内
+            'https://secret-service.bietiaop.com/rkeys',//国内
         ],
         this.context.logger
         );
