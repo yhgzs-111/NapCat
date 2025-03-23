@@ -12,9 +12,27 @@ export class NTQQMsgApi {
         this.context = context;
         this.core = core;
     }
-    
+
     async clickInlineKeyboardButton(...params: Parameters<NodeIKernelMsgService['clickInlineKeyboardButton']>) {
         return this.context.session.getMsgService().clickInlineKeyboardButton(...params);
+    }
+
+    async searchMsgWithKeywords(keyWords: string[], param: Peer & { searchFields: number, pageLimit: number }) {
+        let outputSearchId = 0;
+        return this.core.eventWrapper.callNormalEventV2(
+            'NodeIKernelSearchService/searchMsgWithKeywords',
+            'NodeIKernelSearchListener/onSearchMsgKeywordsResult',
+            [keyWords, param],
+            (searchId) => {
+                outputSearchId = searchId;
+                return true;
+            },
+            (event) => {
+                return event.searchId == outputSearchId;
+            },
+            1,
+            5000
+        );
     }
 
     getMsgByClientSeqAndTime(peer: Peer, replyMsgClientSeq: string, replyMsgTime: string) {
@@ -137,7 +155,6 @@ export class NTQQMsgApi {
     }
 
     async queryFirstMsgBySender(peer: Peer, SendersUid: string[]) {
-        console.log(peer, SendersUid);
         return await this.context.session.getMsgService().queryMsgsWithFilterEx('0', '0', '0', {
             chatInfo: peer,
             filterMsgType: [],

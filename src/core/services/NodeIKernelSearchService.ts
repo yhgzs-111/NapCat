@@ -54,7 +54,7 @@ export interface NodeIKernelSearchService {
 
     cancelSearchChatMsgs(...args: unknown[]): unknown;// needs 3 arguments
 
-    searchMsgWithKeywords(keyWords: string[], param: Peer & { searchFields: number, pageLimit: number }): Promise<GeneralCallResult>;
+    searchMsgWithKeywords(keyWords: string[], param: Peer & { searchFields: number, pageLimit: number }): number;
 
     searchMoreMsgWithKeywords(...args: unknown[]): unknown;// needs 1 arguments
 

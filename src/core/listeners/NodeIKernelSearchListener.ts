@@ -96,7 +96,7 @@ export interface NodeIKernelSearchListener {
     }): any;
 
     onSearchMsgKeywordsResult(params: {
-        searchId: string,
+        searchId: number,
         hasMore: boolean,
         resultItems: Array<{
             msgId: string,
