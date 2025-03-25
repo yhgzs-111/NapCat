@@ -180,7 +180,7 @@ export interface OB11MessageNode {
         id?: string;
         user_id?: number | string;  // number
         uin?: number | string;  // number, compatible with go-cqhttp
-        nickname: string;
+        nickname?: string;
         name?: string; // compatible with go-cqhttp
         content: OB11MessageMixType;
         source?: string;

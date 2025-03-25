@@ -9,7 +9,9 @@ const external = [
     'ws',
     'express',
     '@ffmpeg.wasm/core-mt',
-    '@napi-rs/canvas'
+    '@napi-rs/canvas',
+    '@node-rs/jieba',
+    '@node-rs/jieba/dict.js',
 ];
 const nodeModules = [...builtinModules, builtinModules.map((m) => `node:${m}`)].flat();
 
