@@ -207,8 +207,8 @@ interface PhotoWall {
 
 // 简单信息
 export interface SimpleInfo {
-    uid?: string;
-    uin?: string;
+    uid: string;
+    uin: string;
     coreInfo: CoreInfo;
     baseInfo: BaseInfo;
     status: UserStatus | null;

@@ -34,7 +34,23 @@ export class OB11Construct {
             level: 0,
         }));
     }
-
+    static friend(friends: FriendV2,info:UserV2): OB11User {
+        return {
+            birthday_year: friends.baseInfo.birthday_year,
+            birthday_month: friends.baseInfo.birthday_month,
+            birthday_day: friends.baseInfo.birthday_day,
+            user_id: parseInt(friends.coreInfo.uin),
+            age: friends.baseInfo.age,
+            phone_num: friends.baseInfo.phoneNum,
+            email: friends.baseInfo.eMail,
+            category_id: friends.baseInfo.categoryId,
+            nickname: friends.coreInfo.nick ?? '',
+            remark: friends.coreInfo.remark ?? friends.coreInfo.nick,
+            sex: this.sex(friends.baseInfo.sex),
+            level: calcQQLevel(info?.commonExt?.qqLevel) || 0,
+            qid: friends.baseInfo.qid,
+        };
+    }
     static groupMemberRole(role: number): OB11GroupMemberRole | undefined {
         return {
             4: OB11GroupMemberRole.owner,

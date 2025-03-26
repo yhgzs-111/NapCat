@@ -15,7 +15,24 @@ export default class GetFriendList extends OneBotAction<Payload, OB11User[]> {
     override payloadSchema = SchemaData;
 
     async _handle(_payload: Payload) {
-        //全新逻辑
-        return OB11Construct.friends(await this.core.apis.FriendApi.getBuddy());
+        // 获取好友列表
+        let buddyList = await this.core.apis.FriendApi.getBuddyV2SimpleInfoMap();
+        const buddyArray = Array.from(buddyList.values());
+
+        // 批量并行获取用户详情
+        const userDetailsPromises = buddyArray.map(member =>
+            this.core.apis.UserApi.getUserDetailInfoV2(member.uin ?? '')
+                .catch(_ => {
+                    return { uin: member.uin, uid: member.uid };
+                })
+        );
+        const userDetails = await Promise.all(userDetailsPromises);
+
+        const friendList = buddyArray.map((friend, index) => {
+            const userDetail = userDetails[index] || { uin: friend.uin, uid: friend.uid };
+            return OB11Construct.friend(friend, userDetail);
+        });
+
+        return friendList;
     }
 }
