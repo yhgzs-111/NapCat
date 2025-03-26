@@ -68,7 +68,6 @@
     "@ffmpeg.wasm/core-mt": "^0.13.2",
     "@napi-rs/canvas": "^0.1.67",
     "@node-rs/jieba": "^2.0.1",
-    "canvas": "^3.1.0",
     "express": "^5.0.0",
     "napcat.protobuf": "^1.1.2",
     "silk-wasm": "^3.6.1",
