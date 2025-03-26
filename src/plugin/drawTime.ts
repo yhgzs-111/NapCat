@@ -1,4 +1,6 @@
 import { createCanvas, loadImage } from "@napi-rs/canvas";
+import path from "path";
+import { current_path } from "./data";
 
 /**
  * 绘制时间模式匹配的可视化图表
@@ -41,7 +43,7 @@ export async function drawTimePattern(data: {
     const ctx = canvas.getContext('2d');
 
     // 加载背景图
-    const backgroundImage = await loadImage('C:\\fonts\\post.jpg');
+    const backgroundImage = await loadImage(path.join(current_path,'.\\fonts\\post.jpg'));
     const pattern = ctx.createPattern(backgroundImage, 'repeat');
     ctx.fillStyle = pattern;
     ctx.fillRect(0, 0, width, height);

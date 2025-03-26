@@ -1,4 +1,6 @@
 import { createCanvas, loadImage } from "@napi-rs/canvas";
+import path from "path";
+import { current_path } from "./data";
 
 interface NetworkNode {
     id: string;
@@ -39,7 +41,7 @@ export async function drawWordNetwork(data: NetworkData): Promise<string> {
 
     // 绘制背景
     try {
-        const backgroundImage = await loadImage('C:\\fonts\\post.jpg');
+        const backgroundImage = await loadImage(path.join(current_path, '.\\fonts\\post.jpg'));
         const pattern = ctx.createPattern(backgroundImage, 'repeat');
         if (pattern) {
             ctx.fillStyle = pattern;

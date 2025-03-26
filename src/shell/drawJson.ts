@@ -1,4 +1,6 @@
+import { current_path } from "@/plugin/data";
 import { createCanvas, loadImage } from "@napi-rs/canvas";
+import path from "path";
 
 export async function drawJsonContent(jsonContent: string) {
     const lines = jsonContent.split('\n');
@@ -27,7 +29,7 @@ export async function drawJsonContent(jsonContent: string) {
     const finalCanvas = createCanvas(width, height);
     const finalCtx = finalCanvas.getContext('2d');
 
-    const backgroundImage = await loadImage('C:\\fonts\\post.jpg');
+    const backgroundImage = await loadImage(path.join(current_path,'.\\fonts\\post.jpg'));
     const pattern = finalCtx.createPattern(backgroundImage, 'repeat');
     finalCtx.fillStyle = pattern;
     finalCtx.fillRect(0, 0, width, height);
