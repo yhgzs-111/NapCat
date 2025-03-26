@@ -1,4 +1,4 @@
-import { ModifyProfileParams, User, UserDetailSource } from '@/core/types';
+import { ModifyProfileParams, UserDetailSource } from '@/core/types';
 import { RequestUtil } from '@/common/request';
 import { InstanceContext, NapCatCore, ProfileBizType } from '..';
 import { solveAsyncProblem } from '@/common/helper';
@@ -77,7 +77,7 @@ export class NTQQUserApi {
         return this.context.session.getGroupService().setHeader(gc, filePath);
     }
 
-    async fetchUserDetailInfo(uid: string, mode: UserDetailSource = UserDetailSource.KDB) {
+    async fetchUserDetailInfoV2(uid: string, mode: UserDetailSource = UserDetailSource.KDB) {
         const [, profile] = await this.core.eventWrapper.callNormalEventV2(
             'NodeIKernelProfileService/fetchUserDetailInfo',
             'NodeIKernelProfileListener/onUserDetailInfoChanged',
@@ -90,43 +90,19 @@ export class NTQQUserApi {
             () => true,
             (profile) => profile.uid === uid,
         );
-        const RetUser: User = {
-            ...profile.simpleInfo.status,
-            ...profile.simpleInfo.vasInfo,
-            ...profile.commonExt,
-            ...profile.simpleInfo.baseInfo,
-            ...profile.simpleInfo.coreInfo,
-            qqLevel: profile.commonExt?.qqLevel,
-            age: profile.simpleInfo.baseInfo.age,
-            pendantId: '',
-            nick: profile.simpleInfo.coreInfo.nick || '',
-        };
-        return RetUser;
+        return profile;
     }
 
-    async getUserDetailInfo(uid: string): Promise<User> {
-        let retUser = await solveAsyncProblem(async (uid) => this.fetchUserDetailInfo(uid, UserDetailSource.KDB), uid);
+    async getUserDetailInfoV2(uid: string) {
+        let retUser = await solveAsyncProblem(async (uid) => this.fetchUserDetailInfoV2(uid, UserDetailSource.KDB), uid);
         if (retUser && retUser.uin !== '0') {
             return retUser;
         }
         this.context.logger.logDebug('[NapCat] [Mark] getUserDetailInfo Mode1 Failed.');
-        retUser = await this.fetchUserDetailInfo(uid, UserDetailSource.KSERVER);
+        retUser = await this.fetchUserDetailInfoV2(uid, UserDetailSource.KSERVER);
         if (retUser && retUser.uin === '0') {
             retUser.uin = await this.core.apis.UserApi.getUidByUinV2(uid) ?? '0';
         }
-        return retUser;
-    }
-
-    async getUserDetailInfoV2(uid: string): Promise<User> {
-        const fallback = new Fallback<User>((user) => FallbackUtil.boolchecker(user, user !== undefined && user.uin !== '0'))
-            .add(() => this.fetchUserDetailInfo(uid, UserDetailSource.KDB))
-            .add(() => this.fetchUserDetailInfo(uid, UserDetailSource.KSERVER));
-        const retUser = await fallback.run().then(async (user) => {
-            if (user && user.uin === '0') {
-                user.uin = await this.core.apis.UserApi.getUidByUinV2(uid) ?? '0';
-            }
-            return user;
-        });
         return retUser;
     }
 
@@ -216,7 +192,7 @@ export class NTQQUserApi {
             .add(() => this.context.session.getUixConvertService().getUin([uid]).then((data) => data.uinInfo.get(uid)))
             .add(() => this.context.session.getProfileService().getUinByUid('FriendsServiceImpl', [uid]).get(uid))
             .add(() => this.context.session.getGroupService().getUinByUids([uid]).then((data) => data.uins.get(uid)))
-            .add(() => this.getUserDetailInfo(uid).then((data) => data.uin));
+            .add(() => this.getUserDetailInfoV2(uid).then((data) => data.uin));
 
         const uin = await fallback.run().catch(() => '0');
         return uin ?? '0';

@@ -46,7 +46,6 @@ export async function NCoreInitFramework(
             resolveSelfInfo({
                 uid: loginResult.uid,
                 uin: loginResult.uin,
-                nick: '', // 获取不到
                 online: true,
             });
         };

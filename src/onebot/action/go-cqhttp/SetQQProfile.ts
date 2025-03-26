@@ -16,15 +16,15 @@ export class SetQQProfile extends OneBotAction<Payload, Awaited<ReturnType<NTQQU
 
     async _handle(payload: Payload) {
         const self = this.core.selfInfo;
-        const OldProfile = await this.core.apis.UserApi.getUserDetailInfo(self.uid);
+        const OldProfile = await this.core.apis.UserApi.getUserDetailInfoV2(self.uid);
         return await this.core.apis.UserApi.modifySelfProfile({
             nick: payload.nickname,
-            longNick: (payload?.personal_note ?? OldProfile?.longNick) || '',
-            sex: parseInt(payload?.sex ? payload?.sex.toString() : OldProfile?.sex!.toString()),
+            longNick: (payload?.personal_note ?? OldProfile?.simpleInfo.baseInfo.longNick) || '',
+            sex: parseInt(payload?.sex ? payload?.sex.toString() : OldProfile?.simpleInfo.baseInfo.sex!.toString()),
             birthday: {
-                birthday_year: OldProfile?.birthday_year!.toString(),
-                birthday_month: OldProfile?.birthday_month!.toString(),
-                birthday_day: OldProfile?.birthday_day!.toString(),
+                birthday_year: OldProfile?.simpleInfo.baseInfo.birthday_year!.toString(),
+                birthday_month: OldProfile?.simpleInfo.baseInfo.birthday_month!.toString(),
+                birthday_day: OldProfile?.simpleInfo.baseInfo.birthday_day!.toString(),
             },
             location: undefined,
         });

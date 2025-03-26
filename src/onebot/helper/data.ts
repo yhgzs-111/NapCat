@@ -1,6 +1,6 @@
 import { calcQQLevel } from '@/common/helper';
 import { FileNapCatOneBotUUID } from '@/common/file-uuid';
-import { FriendV2, Group, GroupFileInfoUpdateParamType, GroupMember, SelfInfo, NTSex } from '@/core';
+import { FriendV2, Group, GroupFileInfoUpdateParamType, GroupMember, SelfInfo, NTSex, UserV2 } from '@/core';
 import {
     OB11Group,
     OB11GroupFile,
@@ -14,7 +14,7 @@ export class OB11Construct {
     static selfInfo(selfInfo: SelfInfo): OB11User {
         return {
             user_id: +selfInfo.uin,
-            nickname: selfInfo.nick,
+            nickname: selfInfo.simpleInfo?.coreInfo.nick ?? '',
         };
     }
 
@@ -53,20 +53,20 @@ export class OB11Construct {
         }[sex] || OB11UserSex.unknown;
     }
 
-    static groupMember(group_id: string, member: GroupMember): OB11GroupMember {
+    static groupMember(group_id: string, member: GroupMember, info: UserV2): OB11GroupMember {
         return {
             group_id: +group_id,
             user_id: +member.uin,
             nickname: member.nick,
             card: member.cardName,
-            sex: this.sex(member.sex),
-            age: member.age ?? 0,
-            area: '',
+            sex: this.sex(info?.simpleInfo.baseInfo.sex),
+            age: info?.simpleInfo.baseInfo.age ?? 0,
+            area: info?.commonExt?.address,
             level: member.memberRealLevel?.toString() ?? '0',
-            qq_level: member.qqLevel && calcQQLevel(member.qqLevel) || 0,
+            qq_level: info?.commonExt?.qqLevel && calcQQLevel(info.commonExt.qqLevel) || 0,
             join_time: +member.joinTime,
             last_sent_time: +member.lastSpeakTime,
-            title_expire_time: 0,
+            title_expire_time: +member.specialTitleExpireTime,
             unfriendly: false,
             card_changeable: true,
             is_robot: member.isRobot,

@@ -131,7 +131,6 @@ async function handleLogin(
         inner_resolve({
             uid: loginResult.uid,
             uin: loginResult.uin,
-            nick: '',
             online: true,
         });
 
@@ -346,8 +345,8 @@ export async function NCoreInitShell() {
         guid,
         basicInfoWrapper.QQVersionAppid,
         basicInfoWrapper.getFullQQVesion(),
-        selfInfo.uin,
-        selfInfo.uid,
+        selfInfo.uin ?? '',
+        selfInfo.uid ?? '',
         dataPath,
     );
 
@@ -380,7 +379,6 @@ export async function NCoreInitShell() {
 export class NapCatShell {
     readonly core: NapCatCore;
     readonly context: InstanceContext;
-
     constructor(
         wrapper: WrapperNodeApi,
         session: NodeIQQNTWrapperSession,

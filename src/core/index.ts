@@ -89,7 +89,7 @@ export class NapCatCore {
     NapCatTempPath: string = '';
     apis: StableNTApiWrapper;
     // runtime info, not readonly
-    selfInfo: SelfInfo;
+    selfInfo: Partial<SelfInfo>;
     util: NodeQQNTWrapperUtil;
     configLoader: NapCatConfigLoader;
 

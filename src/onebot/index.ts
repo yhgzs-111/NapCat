@@ -97,13 +97,13 @@ export class NapCatOneBot11Adapter {
         return log;
     }
     async InitOneBot() {
-        const selfInfo = this.core.selfInfo;
+
         const ob11Config = this.configLoader.configData;
 
-        this.core.apis.UserApi.getUserDetailInfo(selfInfo.uid)
+        this.core.apis.UserApi.getUserDetailInfoV2(this.core.selfInfo.uid)
             .then((user) => {
-                selfInfo.nick = user.nick;
-                this.context.logger.setLogSelfInfo(selfInfo);
+                this.core.selfInfo = { ...user, online: this.core.selfInfo.online };
+                this.context.logger.setLogSelfInfo({ nick: this.core.selfInfo.simpleInfo?.coreInfo.nick ?? '', uid: this.core.selfInfo.uid });
             })
             .catch(e => this.context.logger.logError(e));
 
@@ -170,7 +170,7 @@ export class NapCatOneBot11Adapter {
         this.initGroupListener();
 
         WebUiDataRuntime.setQQVersion(this.core.context.basicInfoWrapper.getFullQQVesion());
-        WebUiDataRuntime.setQQLoginInfo(selfInfo);
+        WebUiDataRuntime.setQQLoginInfo(this.core.selfInfo);
         WebUiDataRuntime.setQQLoginStatus(true);
         WebUiDataRuntime.setOnOB11ConfigChanged(async (newConfig) => {
             const prev = this.configLoader.configData;

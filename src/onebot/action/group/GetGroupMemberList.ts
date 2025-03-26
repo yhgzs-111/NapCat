@@ -21,8 +21,8 @@ export class GetGroupMemberList extends OneBotAction<Payload, OB11GroupMember[]>
         const noCache = this.parseBoolean(payload.no_cache ?? false);
         const groupMembers = await this.getGroupMembers(groupIdStr, noCache);
         const _groupMembers = await Promise.all(
-            Array.from(groupMembers.values()).map(item =>
-                OB11Construct.groupMember(groupIdStr, item)
+            Array.from(groupMembers.values()).map(async item =>
+                OB11Construct.groupMember(groupIdStr, item, await this.core.apis.UserApi.getUserDetailInfoV2(item.uin))
             )
         );
         return Array.from(new Map(_groupMembers.map(member => [member.user_id, member])).values());

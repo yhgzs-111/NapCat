@@ -1,5 +1,3 @@
-import { QQLevel, NTSex } from './user';
-
 export interface KickMemberInfo {
     optFlag: number;
     optOperate: number;
@@ -274,24 +272,42 @@ export enum NTGroupMemberRole {
     KOWNER = 4
 }
 export interface GroupMember {
-    memberRealLevel: number | undefined;
-    memberSpecialTitle?: string;
-    avatarPath: string;
-    cardName: string;
-    cardType: number;
-    isDelete: boolean;
-    nick: string;
-    qid: string;
-    remark: string;
-    role: NTGroupMemberRole;
-    shutUpTime: number; // 禁言时间(S)
     uid: string;
+    qid: string;
     uin: string;
+    nick: string;
+    remark: string;
+    cardType: number;
+    cardName: string;
+    role: NTGroupMemberRole;
+    avatarPath: string;
+    shutUpTime: number;
+    isDelete: boolean;
+    isSpecialConcerned: boolean;
+    isSpecialShield: boolean;
     isRobot: boolean;
-    sex?: NTSex;
-    age?: number;
-    qqLevel?: QQLevel;
-    isChangeRole: boolean;
-    joinTime: string;
-    lastSpeakTime: string;
+    groupHonor: Uint8Array;
+    memberRealLevel: number;
+    memberLevel: number;
+    globalGroupLevel: number;
+    globalGroupPoint: number;
+    memberTitleId: number;
+    memberSpecialTitle: string;
+    specialTitleExpireTime: string;
+    userShowFlag: number;
+    userShowFlagNew: number;
+    richFlag: number;
+    mssVipType: number;
+    bigClubLevel: number;
+    bigClubFlag: number;
+    autoRemark: string;
+    creditLevel: number;
+    joinTime: number;
+    lastSpeakTime: number;
+    memberFlag: number;
+    memberFlagExt: number;
+    memberMobileFlag: number;
+    memberFlagExt2: number;
+    isSpecialShielded: boolean;
+    cardNameId: number;
 }

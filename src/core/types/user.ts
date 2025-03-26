@@ -233,13 +233,15 @@ export interface SelfStatusInfo {
     setTime: string;
 }
 
+export type UserV2 = UserDetailInfoListenerArg;
+
 // 用户详细信息监听参数
 export interface UserDetailInfoListenerArg {
     uid: string;
     uin: string;
     simpleInfo: SimpleInfo;
-    commonExt: CommonExt;
-    photoWall: PhotoWall;
+    commonExt?: CommonExt;
+    photoWall?: PhotoWall;
 }
 
 // 修改个人资料参数
@@ -332,12 +334,11 @@ export interface User {
 }
 
 // 自身信息
-export interface SelfInfo extends User {
-    online?: boolean;
+export interface SelfInfo extends Partial<UserV2> {
+    uid: string;
+    uin: string;
+    online: boolean;
 }
-
-// 好友类型
-export type Friend = User;
 
 // 业务键枚举
 export enum BizKey {

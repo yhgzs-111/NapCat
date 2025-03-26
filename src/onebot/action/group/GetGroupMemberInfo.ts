@@ -32,24 +32,20 @@ class GetGroupMemberInfo extends OneBotAction<Payload, OB11GroupMember> {
 
         const [member, info] = await Promise.all([
             this.core.apis.GroupApi.getGroupMemberEx(payload.group_id.toString(), uid, isNocache),
-            this.core.apis.UserApi.getUserDetailInfo(uid),
+            this.core.apis.UserApi.getUserDetailInfoV2(uid),
         ]);
 
         if (!member || !groupMember) throw new Error(`群(${payload.group_id})成员${payload.user_id}不存在`);
 
-        return info ? { ...groupMember, ...member, ...info } : member;
+        return { member, info, groupMember };
     }
 
     async _handle(payload: Payload) {
         const isNocache = this.parseBoolean(payload.no_cache ?? true);
         const uid = await this.getUid(payload.user_id);
-        const member = await this.getGroupMemberInfo(payload, uid, isNocache);
-
-        if (!member) {
-            this.core.context.logger.logDebug('获取群成员详细信息失败, 只能返回基础信息');
-        }
-
-        return OB11Construct.groupMember(payload.group_id.toString(), member);
+        const { member, info } = await this.getGroupMemberInfo(payload, uid, isNocache);
+        console.log('member', JSON.stringify(member, null, 2), 'info', JSON.stringify(info, null, 2));
+        return OB11Construct.groupMember(payload.group_id.toString(), member, info);
     }
 }
 
