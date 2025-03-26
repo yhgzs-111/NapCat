@@ -7,12 +7,12 @@ export async function drawJsonContent(jsonContent: string) {
     const lineHeight = 30;
     const canvas = createCanvas(1, 1);
     const ctx = canvas.getContext('2d');
-
+    const chineseRegex = /[\u4e00-\u9fa5\u3000-\u303f\uff00-\uffef]/;
     let maxLineWidth = 0;
     for (const line of lines) {
         let lineWidth = 0;
         for (const char of line) {
-            const isChinese = /[\u4e00-\u9fa5]/.test(char);
+            const isChinese = chineseRegex.test(char);
             ctx.font = isChinese ? '20px "Aa偷吃可爱长大的"' : '20px "JetBrains Mono"';
             lineWidth += ctx.measureText(char).width;
         }

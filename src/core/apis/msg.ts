@@ -166,6 +166,18 @@ export class NTQQMsgApi {
             pageLimit: 20000,
         });
     }
+    async queryFirstMsgBySenderTime(peer: Peer, SendersUid: string[], filterMsgFromTime: string, filterMsgToTime: string) {
+        return await this.context.session.getMsgService().queryMsgsWithFilterEx('0', '0', '0', {
+            chatInfo: peer,
+            filterMsgType: [],
+            filterSendersUid: SendersUid,
+            filterMsgToTime: filterMsgToTime,
+            filterMsgFromTime: filterMsgFromTime,
+            isReverseOrder: true,
+            isIncludeCurrent: true,
+            pageLimit: 20000,
+        });
+    }
     async queryFirstMsgByTime(peer: Peer, filterMsgFromTime: string, filterMsgToTime: string) {
         return await this.context.session.getMsgService().queryMsgsWithFilterEx('0', '0', '0', {
             chatInfo: peer,
