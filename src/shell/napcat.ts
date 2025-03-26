@@ -1,9 +1,10 @@
-import { dirname, join } from 'node:path';
+
 import { NCoreInitShell } from './base';
 import { GlobalFonts } from '@napi-rs/canvas';
-import { fileURLToPath } from 'node:url';
+import { current_path } from '@/plugin/data';
+import path from 'path';
 
-let current_path = dirname(fileURLToPath(import.meta.url));
-GlobalFonts.registerFromPath(join(current_path, '.\\fonts\\JetBrainsMono.ttf'), 'JetBrains Mono');
-GlobalFonts.registerFromPath(join(current_path, '.\\fonts\\AaCute.ttf', 'Aa偷吃可爱长大的'));
+GlobalFonts.registerFromPath(path.join(current_path, './fonts/JetBrainsMono.ttf'), 'JetBrains Mono');
+GlobalFonts.registerFromPath(path.join(current_path, './fonts/AaCute.ttf'), 'Aa偷吃可爱长大的');
+console.log('字体注册完成');
 NCoreInitShell();
