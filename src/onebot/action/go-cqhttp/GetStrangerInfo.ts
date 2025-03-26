@@ -29,17 +29,17 @@ export default class GoCQHTTPGetStrangerInfo extends OneBotAction<Payload, OB11U
             user_id: parseInt(extendData.detail.uin) ?? 0,
             uid: info.uid ?? uid,
             nickname: extendData.detail.simpleInfo.coreInfo.nick ?? '',
-            age: extendData.detail.simpleInfo.baseInfo.age ?? info.simpleInfo.baseInfo.age,
+            age: extendData.detail.simpleInfo.baseInfo.age ?? info.simpleInfo?.baseInfo.age,
             qid: extendData.detail.simpleInfo.baseInfo.qid,
             qqLevel: calcQQLevel(extendData.detail.commonExt?.qqLevel ?? info.commonExt?.qqLevel),
             sex: OB11Construct.sex(extendData.detail.simpleInfo.baseInfo.sex) ?? OB11UserSex.unknown,
-            long_nick: extendData.detail.simpleInfo.baseInfo.longNick ?? info.simpleInfo.baseInfo.longNick,
+            long_nick: extendData.detail.simpleInfo.baseInfo.longNick ?? info.simpleInfo?.baseInfo.longNick,
             reg_time: extendData.detail.commonExt?.regTime ?? info.commonExt?.regTime,
             is_vip: extendData.detail.simpleInfo.vasInfo?.svipFlag,
             is_years_vip: extendData.detail.simpleInfo.vasInfo?.yearVipFlag,
             vip_level: extendData.detail.simpleInfo.vasInfo?.vipLevel,
-            remark: extendData.detail.simpleInfo.coreInfo.remark ?? info.simpleInfo.coreInfo.remark,
-            status: extendData.detail.simpleInfo.status?.status ?? info.simpleInfo.status?.status,
+            remark: extendData.detail.simpleInfo.coreInfo.remark ?? info.simpleInfo?.coreInfo.remark,
+            status: extendData.detail.simpleInfo.status?.status ?? info.simpleInfo?.status?.status,
             login_days: 0,//失效
         };
     }

@@ -445,7 +445,7 @@ export class OneBotMsgApi {
             const uid = await this.core.apis.UserApi.getUidByUinV2(`${atQQ}`);
             if (!uid) throw new Error('Get Uid Error');
             const info = await this.core.apis.UserApi.getUserDetailInfoV2(uid);
-            return at(atQQ, uid, NTMsgAtType.ATTYPEONE, info.simpleInfo.coreInfo.nick || '');
+            return at(atQQ, uid, NTMsgAtType.ATTYPEONE, info.simpleInfo?.coreInfo.nick || '');
         },
 
         [OB11MessageDataType.reply]: async ({ data: { id } }) => {
@@ -845,7 +845,7 @@ export class OneBotMsgApi {
                 return;
             }
         }
-        resMsg.sender.nickname = (await this.core.apis.UserApi.getUserDetailInfoV2(msg.senderUid)).simpleInfo.coreInfo.nick || '';
+        resMsg.sender.nickname = (await this.core.apis.UserApi.getUserDetailInfoV2(msg.senderUid)).simpleInfo?.coreInfo.nick || '';
     }
 
     private async handleTempGroupMessage(resMsg: OB11Message, msg: RawMessage) {

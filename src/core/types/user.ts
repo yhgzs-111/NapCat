@@ -239,7 +239,7 @@ export type UserV2 = UserDetailInfoListenerArg;
 export interface UserDetailInfoListenerArg {
     uid: string;
     uin: string;
-    simpleInfo: SimpleInfo;
+    simpleInfo?: SimpleInfo;
     commonExt?: CommonExt;
     photoWall?: PhotoWall;
 }
