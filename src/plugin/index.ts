@@ -126,6 +126,7 @@ export const plugin_onmessage = async (adapter: string, _core: NapCatCore, _obCt
             '#Ai语音文本 <system> 返回Ai语音文本\n' +
             '#Ai语音角色列表 <system> 返回Ai语音角色\n' +
             '#Ai语音设置角色 <system> 设置Ai语音角色\n' +
+            '#网页截图 <system> 返回网页截图\n' +
             `#关于千千 <system> 返回千千的介绍`;
         await action.get('send_group_msg')?.handle({
             group_id: String(message.group_id),
@@ -1791,6 +1792,23 @@ export const plugin_onmessage = async (adapter: string, _core: NapCatCore, _obCt
                 type: OB11MessageDataType.image,
                 data: {
                     file: await drawJsonContent(msgJson)
+                }
+            }]
+        }, adapter, instance.config);
+    }
+    else if (message.message.find(e => e.type == 'text' && (e.data.text.indexOf('https://') || e.data.text.indexOf('http://')))) {
+        let text = message.message.filter(e => e.type == 'text').map(e => e.data.text).join(' ');
+        //(https?|ftp|file)://[-A-Za-z0-9+&@#/%?=~_|!:,.;]+[-A-Za-z0-9+&@#/%=~_|]
+        let url = text.match(/(https?|ftp|file):\/\/[-A-Za-z0-9+&@#/%?=~_|!:,.;]+[-A-Za-z0-9+&@#/%=~_|]/g)?.[0];
+        if (!url) return;
+        let imageMirror = ['https://urlscan.io/liveshot/?url=', 'https://image.thum.io/get/'];
+        let imageUrl = imageMirror[Math.floor(Math.random() * imageMirror.length)] + url;
+        await action.get('send_group_msg')?.handle({
+            group_id: String(message.group_id),
+            message: [{
+                type: OB11MessageDataType.image,
+                data: {
+                    file: imageUrl
                 }
             }]
         }, adapter, instance.config);
