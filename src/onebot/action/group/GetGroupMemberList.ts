@@ -29,7 +29,7 @@ export class GetGroupMemberList extends OneBotAction<Payload, OB11GroupMember[]>
 
         // 批量并行获取用户详情
         const userDetailsPromises = memberArray.map(member =>
-            this.core.apis.UserApi.getUserDetailInfoV2(member.uin)
+            this.core.apis.UserApi.fetchUserDetailInfoV2(member.uid)
                 .catch(_ => {
                     return { uin: member.uin, uid: member.uid };
                 })

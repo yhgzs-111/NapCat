@@ -100,7 +100,7 @@ export class NapCatOneBot11Adapter {
 
         const ob11Config = this.configLoader.configData;
 
-        this.core.apis.UserApi.getUserDetailInfoV2(this.core.selfInfo.uid)
+        this.core.apis.UserApi.fetchUserDetailInfoV2(this.core.selfInfo.uid)
             .then((user) => {
                 this.core.selfInfo = { ...user, online: this.core.selfInfo.online };
                 this.context.logger.setLogSelfInfo({ nick: this.core.selfInfo.simpleInfo?.coreInfo.nick ?? '', uid: this.core.selfInfo.uid });

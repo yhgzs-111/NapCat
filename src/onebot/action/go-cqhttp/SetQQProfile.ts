@@ -16,7 +16,7 @@ export class SetQQProfile extends OneBotAction<Payload, Awaited<ReturnType<NTQQU
 
     async _handle(payload: Payload) {
         const self = this.core.selfInfo;
-        const OldProfile = await this.core.apis.UserApi.getUserDetailInfoV2(self.uid);
+        const OldProfile = await this.core.apis.UserApi.fetchUserDetailInfoV2(self.uid);
         return await this.core.apis.UserApi.modifySelfProfile({
             nick: payload.nickname,
             longNick: (payload?.personal_note ?? OldProfile?.simpleInfo!.baseInfo.longNick) || '',

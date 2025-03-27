@@ -21,7 +21,7 @@ export default class GetFriendList extends OneBotAction<Payload, OB11User[]> {
 
         // 批量并行获取用户详情
         const userDetailsPromises = buddyArray.map(member =>
-            this.core.apis.UserApi.getUserDetailInfoV2(member.uin ?? '')
+            this.core.apis.UserApi.fetchUserDetailInfoV2(member.uid)
                 .catch(_ => {
                     return { uin: member.uin, uid: member.uid };
                 })

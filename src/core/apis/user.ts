@@ -93,6 +93,15 @@ export class NTQQUserApi {
         return profile;
     }
 
+    async fetchUserDetailInfoV3(uid: string) {
+        let cache = await this.fetchUserDetailInfoV2(uid, UserDetailSource.KDB);
+        if (!cache.commonExt) {
+            cache = await this.fetchUserDetailInfoV2(uid, UserDetailSource.KSERVER);
+        }
+        return cache;
+    }
+
+
     async getUserDetailInfoV2(uid: string) {
         let retUser = await solveAsyncProblem(async (uid) => this.fetchUserDetailInfoV2(uid, UserDetailSource.KDB), uid);
         if (retUser && retUser.uin !== '0') {
@@ -192,7 +201,7 @@ export class NTQQUserApi {
             .add(() => this.context.session.getUixConvertService().getUin([uid]).then((data) => data.uinInfo.get(uid)))
             .add(() => this.context.session.getProfileService().getUinByUid('FriendsServiceImpl', [uid]).get(uid))
             .add(() => this.context.session.getGroupService().getUinByUids([uid]).then((data) => data.uins.get(uid)))
-            .add(() => this.getUserDetailInfoV2(uid).then((data) => data.uin));
+            .add(() => this.fetchUserDetailInfoV2(uid).then((data) => data.uin));
 
         const uin = await fallback.run().catch(() => '0');
         return uin ?? '0';

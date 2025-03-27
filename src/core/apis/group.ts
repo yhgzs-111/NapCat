@@ -44,13 +44,22 @@ export class NTQQGroupApi {
     }
 
     async initApi() {
-        this.initCache().then().catch(e => this.context.logger.logError(e));
+        await this.initCache().then().catch(e => this.context.logger.logError(e));
     }
 
     async initCache() {
+        let promises: Promise<void>[] = [];
         for (const group of await this.getGroups(true)) {
-            this.refreshGroupMemberCache(group.groupCode, false).then().catch(e => this.context.logger.logError(e));
+            let user = await this.refreshGroupMemberCache(group.groupCode, false).then().catch(e => this.context.logger.logError(e));
+            if (user) {
+                for (const member of user) {
+                    let promise = this.core.apis.UserApi.fetchUserDetailInfoV3(member[1].uid).then(_ => void 0).catch(e => this.context.logger.logError(e));
+                    promises.push(promise);
+                }
+            }
         }
+        await Promise.all(promises);
+        this.context.logger.logDebug('[NapCat] [Mark] 群成员缓存初始化完成');
     }
 
     async fetchGroupEssenceList(groupCode: string) {
