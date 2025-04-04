@@ -8,7 +8,10 @@ const external = [
     'silk-wasm',
     'ws',
     'express',
-    '@ffmpeg.wasm/core-mt'
+    '@ffmpeg.wasm/core-mt',
+    '@breezystack/lamejs',
+    'audio-decode',
+    'wavefile'
 ];
 const nodeModules = [...builtinModules, builtinModules.map((m) => `node:${m}`)].flat();
 
