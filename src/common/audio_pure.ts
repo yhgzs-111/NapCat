@@ -14,9 +14,8 @@ import { readFile, writeFile } from 'fs/promises';
 import path from 'path';
 import audioDecode from 'audio-decode'; // 解码 WAV MP3 OGG FLAC
 import { Mp3Encoder } from '@breezystack/lamejs'; // 编码 MP3
-import pkg from 'wavefile';
+import * as wav from 'node-wav';
 
-const { WaveFile } = pkg;
 // import { Encoder as FlacEncoder } from 'libflacjs/lib/encoder'; // 编码 FLAC
 // import * as Flac from 'libflacjs'; // 编码 FLAC
 // import { Muxer } from 'mp4-muxer'; // 替换demux，用于编码 AAC/M4A
@@ -478,36 +477,23 @@ class WAVCodec extends BaseCodec {
 
     override async decode(buffer: Buffer, options?: ConvertOptions): Promise<PCMData> {
         try {
-            // 优先使用wavefile库解析WAV文件
-            const wav = new WaveFile(buffer) as any;
+            // 使用node-wav解析WAV文件
+            const decoded = wav.decode(buffer);
 
-            // 检查音频格式是否为PCM
-            if (wav.fmt.audioFormat !== 1) {
-                // 非PCM格式，使用通用解码器
-                return GenericDecoder.decode(buffer, options);
-            }
+            // node-wav 返回的格式: { sampleRate, channelData }
+            // channelData是一个包含每个声道Float32Array数据的数组
 
             // 获取基本参数
-            const channels = wav.fmt.numChannels;
-            const sampleRate = wav.fmt.sampleRate;
-            const bitsPerSample = wav.fmt.bitsPerSample;
+            const sampleRate = decoded.sampleRate;
+            const channels = decoded.channelData.length;
 
-            // 提取PCM数据并转换为Float32Array
-            const samples = AudioProcessor.pcmToFloat(
-                Buffer.from(wav.data.samples),
-                bitsPerSample
-            );
+            // 将多声道数据合并为单个交织的Float32Array
+            const samples = new Float32Array(decoded.channelData[0]!.length * channels);
 
-            // 提取元数据
-            let metadata: AudioMetadata | undefined;
-            if (wav.LIST && wav.LIST.length > 0 && wav.LIST[0].subChunks) {
-                metadata = {};
-                for (const chunk of wav.LIST[0].subChunks) {
-                    if (chunk.chunkId === 'INAM') metadata.title = chunk.value;
-                    if (chunk.chunkId === 'IART') metadata.artist = chunk.value;
-                    if (chunk.chunkId === 'IPRD') metadata.album = chunk.value;
-                    if (chunk.chunkId === 'ICRD' && chunk.value) metadata.year = parseInt(chunk.value);
-                    if (chunk.chunkId === 'IGNR') metadata.genre = chunk.value;
+            for (let c = 0; c < channels; c++) {
+                const channelData = decoded.channelData[c]!;
+                for (let i = 0; i < channelData.length; i++) {
+                    samples[i * channels + c] = channelData[i]!;
                 }
             }
 
@@ -515,7 +501,7 @@ class WAVCodec extends BaseCodec {
                 samples,
                 sampleRate,
                 channels,
-                metadata
+                metadata: undefined // node-wav不提取元数据
             };
         } catch (error: any) {
             // WAV解析失败，尝试使用通用解码器
@@ -528,34 +514,26 @@ class WAVCodec extends BaseCodec {
             const processed = AudioProcessor.processPCM(pcmData, options);
             const bitDepth = options?.bitDepth ?? 16;
 
-            // 创建新的WAV文件
-            const wav = new WaveFile();
+            // 将交织的PCM数据拆分为各声道数据
+            const channelData = [];
+            const samplesPerChannel = processed.samples.length / processed.channels;
 
-            // 转换为目标位深度的PCM数据
-            const samples = AudioProcessor.floatToPCM(processed.samples, bitDepth);
+            for (let c = 0; c < processed.channels; c++) {
+                const channelSamples = new Float32Array(samplesPerChannel);
+                for (let i = 0; i < samplesPerChannel; i++) {
+                    channelSamples[i] = processed.samples[i * processed.channels + c]!;
+                }
+                channelData.push(channelSamples);
+            }
 
-            // 设置WAV参数
-            wav.fromScratch(
-                processed.channels,
-                processed.sampleRate,
-                String(bitDepth),
-                samples
-            );
+            // 使用node-wav编码
+            const wavBuffer = wav.encode(channelData, {
+                sampleRate: processed.sampleRate,
+                float: false, // 使用整数PCM
+                bitDepth: bitDepth as 8 | 16 | 32
+            });
 
-            // 添加元数据 (如果需要)
-            // if (options?.preserveMetadata && processed.metadata) {
-            //     const meta = processed.metadata;
-            //     wav.setListInfo({
-            //         INAM: meta.title,
-            //         IART: meta.artist,
-            //         IPRD: meta.album,
-            //         ICRD: meta.year?.toString(),
-            //         IGNR: meta.genre
-            //     });
-            // }
-
-            // 输出WAV文件数据
-            return Buffer.from(wav.toBuffer());
+            return Buffer.from(wavBuffer);
         } catch (error: any) {
             throw new AudioError(`WAV编码错误: ${error.message}`, 'encode', 'wav', error);
         }
