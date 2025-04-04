@@ -14,7 +14,7 @@ import { readFile, writeFile } from 'fs/promises';
 import path from 'path';
 import audioDecode from 'audio-decode'; // 解码 WAV MP3 OGG FLAC
 import { Mp3Encoder } from '@breezystack/lamejs'; // 编码 MP3
-import * as wav from 'node-wav';
+import { WavEncoder, WavDecoder } from './audio-enhance/codec/wav'; // 导入 WavEncoder 和 WavDecoder
 
 // import { Encoder as FlacEncoder } from 'libflacjs/lib/encoder'; // 编码 FLAC
 // import * as Flac from 'libflacjs'; // 编码 FLAC
@@ -263,6 +263,7 @@ class AudioProcessor {
         let processedSamples = pcmData.samples;
 
         // 如果需要重采样
+        console.log(`重采样: ${pcmData.sampleRate}Hz → ${targetSampleRate}Hz`);
         if (pcmData.sampleRate !== targetSampleRate) {
             processedSamples = this.resample(
                 processedSamples,
@@ -288,7 +289,6 @@ class AudioProcessor {
             metadata: options?.preserveMetadata ? pcmData.metadata : undefined
         };
     }
-
     /**
      * 从Buffer中提取音频元数据
      */
@@ -357,9 +357,7 @@ class GenericDecoder {
             const audioData = await audioDecode(buffer);
 
             return {
-                samples: audioData.getChannelData(0).length === audioData.length
-                    ? audioData.getChannelData(0)
-                    : this.interleaveSamples(audioData),
+                samples: this.interleaveSamples(audioData),
                 sampleRate: audioData.sampleRate,
                 channels: audioData.numberOfChannels,
                 metadata: AudioProcessor.extractMetadata({})
@@ -477,31 +475,27 @@ class WAVCodec extends BaseCodec {
 
     override async decode(buffer: Buffer, options?: ConvertOptions): Promise<PCMData> {
         try {
-            // 使用node-wav解析WAV文件
-            const decoded = wav.decode(buffer);
+            const decoder = new WavDecoder(buffer);
+            const header = decoder.getHeader();
+            const data = decoder.getData();
 
-            // node-wav 返回的格式: { sampleRate, channelData }
-            // channelData是一个包含每个声道Float32Array数据的数组
+            const sampleRate = header.sampleRate;
+            const channels = header.numChannels;
+            const bitsPerSample = header.bitsPerSample;
 
-            // 获取基本参数
-            const sampleRate = decoded.sampleRate;
-            const channels = decoded.channelData.length;
-
-            // 将多声道数据合并为单个交织的Float32Array
-            const samples = new Float32Array(decoded.channelData[0]!.length * channels);
-
-            for (let c = 0; c < channels; c++) {
-                const channelData = decoded.channelData[c]!;
-                for (let i = 0; i < channelData.length; i++) {
-                    samples[i * channels + c] = channelData[i]!;
-                }
+            // 将Buffer转换为Float32Array
+            let samples: Float32Array;
+            if (bitsPerSample === 8 || bitsPerSample === 16 || bitsPerSample === 32) {
+                samples = AudioProcessor.pcmToFloat(data, bitsPerSample);
+            } else {
+                throw new AudioError(`不支持的WAV位深: ${bitsPerSample}`, 'decode', 'wav');
             }
 
             return {
                 samples,
                 sampleRate,
                 channels,
-                metadata: undefined // node-wav不提取元数据
+                metadata: undefined
             };
         } catch (error: any) {
             // WAV解析失败，尝试使用通用解码器
@@ -514,26 +508,13 @@ class WAVCodec extends BaseCodec {
             const processed = AudioProcessor.processPCM(pcmData, options);
             const bitDepth = options?.bitDepth ?? 16;
 
-            // 将交织的PCM数据拆分为各声道数据
-            const channelData = [];
-            const samplesPerChannel = processed.samples.length / processed.channels;
+            const encoder = new WavEncoder(processed.sampleRate, processed.channels, bitDepth);
 
-            for (let c = 0; c < processed.channels; c++) {
-                const channelSamples = new Float32Array(samplesPerChannel);
-                for (let i = 0; i < samplesPerChannel; i++) {
-                    channelSamples[i] = processed.samples[i * processed.channels + c]!;
-                }
-                channelData.push(channelSamples);
-            }
+            // 将Float32Array转换为指定位深度的Buffer
+            const pcmBuffer = AudioProcessor.floatToPCM(processed.samples, bitDepth);
+            encoder.write(pcmBuffer);
 
-            // 使用node-wav编码
-            const wavBuffer = wav.encode(channelData, {
-                sampleRate: processed.sampleRate,
-                float: false, // 使用整数PCM
-                bitDepth: bitDepth as 8 | 16 | 32
-            });
-
-            return Buffer.from(wavBuffer);
+            return encoder.encode();
         } catch (error: any) {
             throw new AudioError(`WAV编码错误: ${error.message}`, 'encode', 'wav', error);
         }
