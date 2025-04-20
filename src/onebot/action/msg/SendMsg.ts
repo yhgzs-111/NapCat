@@ -1,6 +1,7 @@
 import {
     OB11MessageData,
     OB11MessageDataType,
+    OB11MessageForward,
     OB11MessageMixType,
     OB11MessageNode,
     OB11PostContext,
@@ -12,7 +13,7 @@ import { MessageUnique } from '@/common/message-unique';
 import { ChatType, ElementType, NapCatCore, Peer, RawMessage, SendArkElement, SendMessageElement } from '@/core';
 import { OneBotAction } from '@/onebot/action/OneBotAction';
 import { ForwardMsgBuilder } from '@/common/forward-msg-builder';
-import { stringifyWithBigInt } from '@/common/helper';
+import { isNumeric, stringifyWithBigInt } from '@/common/helper';
 import { PacketMsg } from '@/core/packet/message/message';
 import { rawMsgWithSendMsg } from '@/core/packet/message/converter';
 
@@ -152,21 +153,25 @@ export class SendMsgBase extends OneBotAction<OB11PostSendMsg, ReturnDataType> {
             } else if (returnMsgAndResId.res_id && !returnMsgAndResId.message) {
                 throw Error(`发送转发消息（res_id：${returnMsgAndResId.res_id} 失败`);
             }
-        } else {
-            // if (getSpecialMsgNum(payload, OB11MessageDataType.music)) {
-            //   const music: OB11MessageCustomMusic = messages[0] as OB11MessageCustomMusic;
-            //   if (music) {
-            //   }
-            // }
+        } else if (await this.getIsFowardOneMsg(messages)) {
+            let onebot_inner_forward = await this.getIsFowardOneMsg(messages);
+            if (!onebot_inner_forward) throw Error('转发消息失败，未找到消息');
+            const real_msgid = MessageUnique.getMsgIdAndPeerByShortId(+onebot_inner_forward.data.id)?.MsgId || onebot_inner_forward.data.id;
+            await this.core.apis.MsgApi.forwardMsg(peer,
+                peer,
+                [real_msgid]
+            );
+            // 暂时没办法筛选的委屈办法
+            return { message_id: +onebot_inner_forward.data.id };
         }
-        // log("send msg:", peer, sendElements)
-
         const { sendElements, deleteAfterSentFiles } = await this.obContext.apis.MsgApi
             .createSendElements(messages, peer);
         const returnMsg = await this.obContext.apis.MsgApi.sendMsgWithOb11UniqueId(peer, sendElements, deleteAfterSentFiles);
         return { message_id: returnMsg.id! };
     }
-
+    private async getIsFowardOneMsg(message: OB11MessageData[]): Promise<OB11MessageForward | undefined> {
+        return message.find(msg => msg.type === OB11MessageDataType.forward && isNumeric(msg.data.id)) as OB11MessageForward | undefined;
+    }
     private async uploadForwardedNodesPacket(msgPeer: Peer, messageNodes: OB11MessageNode[], source?: string, news?: {
         text: string
     }[], summary?: string, prompt?: string, parentMeta?: {
