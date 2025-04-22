@@ -4,8 +4,11 @@ import { ActionMap } from '@/onebot/action';
 import { OB11PluginAdapter } from '@/onebot/network/plugin';
 import { RequestUtil } from '@/common/request';
 
-// 用户绑定的TapTap ID存储
-const userBindTapMap = new Map<string, string>();
+// 用户绑定的TapTap ID存储，改为支持多账号
+const userBindTapMap = new Map<string, {
+    default: string;
+    list: string[];
+}>();
 
 /**
  * 发送消息工具函数
@@ -39,28 +42,116 @@ export const plugin_onmessage = async (
     action: ActionMap,
     _instance: OB11PluginAdapter
 ) => {
-    if (message.raw_message.startsWith('/1999 绑定')) {
+    if (message.raw_message.startsWith('#1999 绑定')) {
         const tap_id = message.raw_message.slice(8).trim();
+        const userId = message.user_id.toString();
 
         if (tap_id.length === 0) {
             await sendMessage(message, action, '请输入正确的 TapTap ID');
             return;
         }
 
-        userBindTapMap.set(message.user_id.toString(), tap_id);
+        // 判断用户是否已有绑定记录
+        if (!userBindTapMap.has(userId)) {
+            userBindTapMap.set(userId, {
+                default: tap_id,
+                list: [tap_id]
+            });
+        } else {
+            const userData = userBindTapMap.get(userId)!;
+            // 检查是否已经绑定过该ID
+            if (!userData.list.includes(tap_id)) {
+                userData.list.push(tap_id);
+                userData.default = tap_id; // 新绑定的账号自动设为默认
+            }
+        }
         await sendMessage(message, action, `绑定成功，TapTap ID: ${tap_id}`);
     }
-    if (message.raw_message.startsWith('/1999 查询')) {
-        const tap_id = userBindTapMap.get(message.user_id.toString());
+    else if (message.raw_message.startsWith('#1999 切换')) {
+        const tap_id = message.raw_message.slice(8).trim();
+        const userId = message.user_id.toString();
 
-        if (!tap_id) {
+        if (tap_id.length === 0) {
+            await sendMessage(message, action, '请输入要切换的 TapTap ID');
+            return;
+        }
+
+        const userData = userBindTapMap.get(userId);
+        if (!userData) {
+            await sendMessage(message, action, '您尚未绑定任何账号，请先使用"#1999 绑定"命令');
+            return;
+        }
+
+        if (!userData.list.includes(tap_id)) {
+            await sendMessage(message, action, `未找到ID为 ${tap_id} 的绑定记录，请先绑定该账号`);
+            return;
+        }
+
+        userData.default = tap_id;
+        await sendMessage(message, action, `已切换到 TapTap ID: ${tap_id}`);
+    }
+    else if (message.raw_message.startsWith('#1999 删除')) {
+        const tap_id = message.raw_message.slice(8).trim();
+        const userId = message.user_id.toString();
+
+        if (tap_id.length === 0) {
+            await sendMessage(message, action, '请输入要删除的 TapTap ID');
+            return;
+        }
+
+        const userData = userBindTapMap.get(userId);
+        if (!userData) {
+            await sendMessage(message, action, '您尚未绑定任何账号');
+            return;
+        }
+
+        const index = userData.list.indexOf(tap_id);
+        if (index === -1) {
+            await sendMessage(message, action, `未找到ID为 ${tap_id} 的绑定记录`);
+            return;
+        }
+
+        userData.list.splice(index, 1);
+
+        // 如果删除的是当前默认账号，则需要重新设置默认账号
+        if (userData.default === tap_id) {
+            userData.default = userData.list.length > 0 ? userData.list[0] ?? '' : '';
+        }
+
+        // 如果没有绑定账号了，则删除该用户的记录
+        if (userData.list.length === 0) {
+            userBindTapMap.delete(userId);
+            await sendMessage(message, action, `已删除账号 ${tap_id}，您当前没有绑定任何账号`);
+        } else {
+            await sendMessage(message, action, `已删除账号 ${tap_id}，当前默认账号为 ${userData.default}`);
+        }
+    }
+    else if (message.raw_message.startsWith('#1999 账号')) {
+        const userId = message.user_id.toString();
+        const userData = userBindTapMap.get(userId);
+
+        if (!userData || userData.list.length === 0) {
+            await sendMessage(message, action, '您尚未绑定任何账号');
+            return;
+        }
+
+        let accountList = userData.list.map(id => {
+            return id === userData.default ? `${id} (当前使用)` : id;
+        }).join('\n');
+
+        await sendMessage(message, action, `已绑定的账号列表：\n${accountList}`);
+    }
+    else if (message.raw_message.startsWith('#1999 信息')) {
+        const userId = message.user_id.toString();
+        const userData = userBindTapMap.get(userId);
+
+        if (!userData || !userData.default) {
             await sendMessage(message, action, '请先绑定 TapTap ID');
             return;
         }
 
+        const tap_id = userData.default;
         const userInfo = await get_user(tap_id);
-        let x = JSON.stringify(userInfo, null, 2);
-        _core.context.logger.log(x);
         const user_1999_name = userInfo.data.list[0].basic_module.name;
         const user_1999_role_id = userInfo.data.list[0].basic_module.role_id;
 
@@ -82,17 +173,17 @@ export const plugin_onmessage = async (
 
         await sendMessage(message, action, msg);
     }
-    if (message.raw_message.startsWith('/1999 心相')) {
-        const tap_id = userBindTapMap.get(message.user_id.toString());
+    else if (message.raw_message.startsWith('#1999 心相')) {
+        const userId = message.user_id.toString();
+        const userData = userBindTapMap.get(userId);
 
-        if (!tap_id) {
+        if (!userData || !userData.default) {
             await sendMessage(message, action, '请先绑定 TapTap ID');
             return;
         }
 
+        const tap_id = userData.default;
         const userInfo = await get_user(tap_id);
-        let x = JSON.stringify(userInfo, null, 2);
-        _core.context.logger.log(x);
         const user_1999_name = userInfo.data.list[0].basic_module.name;
         const user_1999_role_id = userInfo.data.list[0].basic_module.role_id;
 
@@ -105,17 +196,17 @@ export const plugin_onmessage = async (
 
         await sendMessage(message, action, msg);
     }
-    if (message.raw_message.startsWith('/1999 角色')) {
-        const tap_id = userBindTapMap.get(message.user_id.toString());
+    else if (message.raw_message.startsWith('#1999 角色')) {
+        const userId = message.user_id.toString();
+        const userData = userBindTapMap.get(userId);
 
-        if (!tap_id) {
+        if (!userData || !userData.default) {
             await sendMessage(message, action, '请先绑定 TapTap ID');
             return;
         }
 
+        const tap_id = userData.default;
         const userInfo = await get_user(tap_id);
-        let x = JSON.stringify(userInfo, null, 2);
-        _core.context.logger.log(x);
         const user_1999_name = userInfo.data.list[0].basic_module.name;
         const user_1999_role_id = userInfo.data.list[0].basic_module.role_id;
 
@@ -127,6 +218,19 @@ export const plugin_onmessage = async (
             user_1999_msg
 
         await sendMessage(message, action, msg);
+    }
+    else if (message.raw_message.startsWith('#1999 帮助') || message.raw_message.startsWith('#1999 菜单')) {
+        const helpMessage = `REVERSE.1999\n` +
+            `#1999 绑定 <TapTap ID> - 绑定 TapTap ID\n` +
+            `#1999 切换 <TapTap ID> - 切换当前使用的 TapTap ID\n` +
+            `#1999 删除 <TapTap ID> - 删除绑定的 TapTap ID\n` +
+            `#1999 账号 - 查看已绑定的账号列表\n` +
+            `#1999 信息 - 查看当前账号信息\n` +
+            `#1999 心相 - 查看心相信息\n` +
+            `#1999 角色 - 查看角色信息\n` +
+            `#1999 帮助 - 查看帮助信息`;
+
+        await sendMessage(message, action, helpMessage);
     }
 };
 
