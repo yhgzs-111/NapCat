@@ -7,7 +7,8 @@ import { builtinModules } from 'module';
 const external = [
     'silk-wasm',
     'ws',
-    'express'
+    'express',
+    '@napi-rs/canvas'
 ];
 const nodeModules = [...builtinModules, builtinModules.map((m) => `node:${m}`)].flat();
 
