@@ -425,7 +425,20 @@ export interface NodeIKernelMsgService {
 
     switchToOfflineGetRichMediaElement(...args: unknown[]): unknown;
 
-    downloadRichMedia(...args: unknown[]): unknown;
+    downloadRichMedia(args: {
+        fileModelId: string,
+        downSourceType: number,
+        triggerType: number,
+        msgId: string,
+        chatType: number,
+        peerUid: string,
+        elementId: string,
+        thumbSize: number,
+        downloadType: number,
+        filePath: string
+    } & {
+        downloadSourceType: number, //33800左右一下的老版本 新版34606已经完全上面格式
+    }): unknown;
 
     getFirstUnreadMsgSeq(args: {
         peerUid: string
@@ -465,14 +478,14 @@ export interface NodeIKernelMsgService {
     setMsgEmojiLikesForRole(...args: unknown[]): unknown;
 
     clickInlineKeyboardButton(params: {
-        guildId: string,
+        guildId?: string,
         peerId: string,
         botAppid: string,
         msgSeq: string,
         buttonId: string,
         callback_data: string,
         dmFlag: number,
-        chatType: number
+        chatType: number // 1私聊 2群
     }): Promise<GeneralCallResult & { status: number, promptText: string, promptType: number, promptIcon: number }>;
 
     setCurOnScreenMsg(...args: unknown[]): unknown;
