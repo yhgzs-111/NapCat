@@ -37,17 +37,18 @@ _Modern protocol-side framework implemented based on NTQQ._
 | Docs | [![Github.IO](https://img.shields.io/badge/docs%20on-Github.IO-orange)](https://napneko.github.io/) | [![Cloudflare.Worker](https://img.shields.io/badge/docs%20on-Cloudflare.Worker-black)](https://doc.napneko.icu/) | [![Cloudflare.HKServer](https://img.shields.io/badge/docs%20on-Cloudflare.HKServer-informational)](https://napcat.napneko.icu/) |
 |:-:|:-:|:-:|:-:|
 
-| Docs | [![Cloudflare.Pages](https://img.shields.io/badge/docs%20on-Cloudflare.Pages-blue)](https://napneko.pages.dev/) | [![Server.Other](https://img.shields.io/badge/docs%20on-Server.Other-green)](https://docs.napcat.cyou/) | [![NapCat.Wiki](https://img.shields.io/badge/docs%20on-NapCat.Wiki-red)](https://www.napcat.wiki) |
+| Docs | [![Cloudflare.Pages](https://img.shields.io/badge/docs%20on-Cloudflare.Pages-blue)](https://napneko.pages.dev/) | [![Server.Other](https://img.shields.io/badge/docs%20on-Server.Other-green)](https://napcat.cyou/) | [![NapCat.Wiki](https://img.shields.io/badge/docs%20on-NapCat.Wiki-red)](https://www.napcat.wiki) |
 |:-:|:-:|:-:|:-:|
 
-| Contact | [![QQ Group#1](https://img.shields.io/badge/QQ%20Group%231-Join-blue)](https://qm.qq.com/q/I6LU87a0Yq) | [![QQ Group#2](https://img.shields.io/badge/QQ%20Group%232-Join-blue)](https://qm.qq.com/q/HaRcfrHpUk) | [![Telegram](https://img.shields.io/badge/Telegram-MelodicMoonlight-blue)](https://t.me/MelodicMoonlight) |
-|:-:|:-:|:-:|:-:|
+| QQ Group | [![QQ Group#4](https://img.shields.io/badge/QQ%20Group%234-Join-blue)](https://qm.qq.com/q/CMmPbGw0jA) | [![QQ Group#3](https://img.shields.io/badge/QQ%20Group%233-Join-blue)](https://qm.qq.com/q/8zJMLjqy2Y) | [![QQ Group#2](https://img.shields.io/badge/QQ%20Group%232-Join-blue)](https://qm.qq.com/q/HaRcfrHpUk) | [![QQ Group#1](https://img.shields.io/badge/QQ%20Group%231-Join-blue)](https://qm.qq.com/q/I6LU87a0Yq) |
+|:-:|:-:|:-:|:-:|:-:|
+
+| Telegram | [![Telegram](https://img.shields.io/badge/Telegram-MelodicMoonlight-blue)](https://t.me/MelodicMoonlight) |
+|:-:|:-:|
 
 ## Thanks
 
 + [Lagrange](https://github.com/LagrangeDev/Lagrange.Core) 对本项目的大力支持 参考部分代码 已获授权
-
-+ [LLOneBot](https://github.com/LLOneBot/LLOneBot) 相关的开发曾参与本项目部分开发
 
 + 不过最最重要的 还是需要感谢屏幕前的你哦~
 
@@ -60,3 +61,7 @@ _Modern protocol-side framework implemented based on NTQQ._
 2. 项目其余逻辑代码采用[本仓库开源许可](./LICENSE).
 
 **本仓库仅用于提高易用性，实现消息推送类功能，此外，禁止任何项目未经仓库主作者授权基于 NapCat 代码开发。使用请遵守当地法律法规，由此造成的问题由使用者和提供违规使用教程者负责。**
+
+## Warnings
+
+[某框架抄袭部分分析](https://napneko.github.io/other/about-copy)

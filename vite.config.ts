@@ -8,7 +8,6 @@ const external = [
     'silk-wasm',
     'ws',
     'express',
-    '@ffmpeg.wasm/core-mt',
     '@napi-rs/canvas',
     '@node-rs/jieba',
     '@node-rs/jieba/dict.js',
@@ -103,7 +102,6 @@ const UniversalBaseConfig = () =>
                 entry: {
                     napcat: 'src/universal/napcat.ts',
                     'audio-worker': 'src/common/audio-worker.ts',
-                    'ffmpeg-worker': 'src/common/ffmpeg-worker.ts',
                     'worker/conoutSocketWorker': 'src/pty/worker/conoutSocketWorker.ts',
                 },
                 formats: ['es'],
@@ -133,7 +131,6 @@ const ShellBaseConfig = () =>
                 entry: {
                     napcat: 'src/shell/napcat.ts',
                     'audio-worker': 'src/common/audio-worker.ts',
-                    'ffmpeg-worker': 'src/common/ffmpeg-worker.ts',
                     'worker/conoutSocketWorker': 'src/pty/worker/conoutSocketWorker.ts',
                 },
                 formats: ['es'],
@@ -163,7 +160,6 @@ const FrameworkBaseConfig = () =>
                 entry: {
                     napcat: 'src/framework/napcat.ts',
                     'audio-worker': 'src/common/audio-worker.ts',
-                    'ffmpeg-worker': 'src/common/ffmpeg-worker.ts',
                     'worker/conoutSocketWorker': 'src/pty/worker/conoutSocketWorker.ts',
                 },
                 formats: ['es'],

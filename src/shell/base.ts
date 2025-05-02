@@ -31,7 +31,9 @@ import { WebUiDataRuntime } from '@/webui/src/helper/Data';
 import { napCatVersion } from '@/common/version';
 import { NodeIO3MiscListener } from '@/core/listeners/NodeIO3MiscListener';
 import { sleep } from '@/common/helper';
-
+import { downloadFFmpegIfNotExists } from '@/common/download-ffmpeg';
+import { FFmpegService } from '@/common/ffmpeg';
+import { connectToNamedPipe } from '@/shell/pipe';
 // NapCat Shell App ES 入口文件
 async function handleUncaughtExceptions(logger: LogWrapper) {
     process.on('uncaughtException', (err) => {
@@ -139,6 +141,7 @@ async function handleLogin(
     loginListener.onLoginConnected = () => {
         waitForNetworkConnection(loginService, logger).then(() => {
             handleLoginInner(context, logger, loginService, quickLoginUin, historyLoginList).then().catch(e => logger.logError(e));
+            loginListener.onLoginConnected = () => { };
         });
     }
     loginListener.onQRCodeGetPicture = ({ pngBase64QrcodeData, qrcodeUrl }) => {
@@ -222,6 +225,11 @@ async function handleLoginInner(context: { isLogined: boolean }, logger: LogWrap
                 }`);
         }
         loginService.getQRCodePicture();
+        try {
+            await WebUiDataRuntime.runWebUiConfigQuickFunction();
+        } catch (error) {
+            logger.logError('WebUi 快速登录失败 执行失败', error);
+        }
     }
 
     loginService.getLoginList().then((res) => {
@@ -305,6 +313,16 @@ export async function NCoreInitShell() {
     const pathWrapper = new NapCatPathWrapper();
     const logger = new LogWrapper(pathWrapper.logsPath);
     handleUncaughtExceptions(logger);
+    await connectToNamedPipe(logger).catch(e => logger.logError('命名管道连接失败', e));
+    if (!process.env['NAPCAT_DISABLE_FFMPEG_DOWNLOAD']) {
+        downloadFFmpegIfNotExists(logger).then(({ path, reset }) => {
+            if (reset && path) {
+                FFmpegService.setFfmpegPath(path, logger);
+            }
+        }).catch(e => {
+            logger.logError('[Ffmpeg] Error:', e);
+        });
+    }
     const basicInfoWrapper = new QQBasicInfoWrapper({ logger });
     const wrapper = loadQQWrapper(basicInfoWrapper.getFullQQVesion());
 

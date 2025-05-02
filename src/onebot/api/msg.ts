@@ -34,7 +34,7 @@ import { EventType } from '@/onebot/event/OneBotEvent';
 import { encodeCQCode } from '@/onebot/helper/cqcode';
 import { uriToLocalFile } from '@/common/file';
 import { RequestUtil } from '@/common/request';
-import fsPromise, { constants } from 'node:fs/promises';
+import fsPromise from 'node:fs/promises';
 import { OB11FriendAddNoticeEvent } from '@/onebot/event/notice/OB11FriendAddNoticeEvent';
 import { ForwardMsgBuilder } from '@/common/forward-msg-builder';
 import { NapProtoMsg } from '@napneko/nap-proto-core';
@@ -45,6 +45,7 @@ import { OB11GroupAdminNoticeEvent } from '../event/notice/OB11GroupAdminNoticeE
 import { GroupChange, GroupChangeInfo, GroupInvite, PushMsgBody } from '@/core/packet/transformer/proto';
 import { OB11GroupRequestEvent } from '../event/request/OB11GroupRequest';
 import { LRUCache } from '@/common/lru-cache';
+import { cleanTaskQueue } from '@/common/clean-task';
 
 type RawToOb11Converters = {
     [Key in keyof MessageElement as Key extends `${string}Element` ? Key : never]: (
@@ -372,7 +373,8 @@ export class OneBotMsgApi {
                 try {
                     multiMsgs = await this.core.apis.PacketApi.pkt.operation.FetchForwardMsg(element.resId);
                 } catch (e) {
-                    this.core.context.logger.logError('Protocol FetchForwardMsg fallback failed!', e);
+                    this.core.context.logger.logError(`Protocol FetchForwardMsg fallback failed! 
+                    element = ${JSON.stringify(element)} , error=${e})`);
                     return null;
                 }
             }
@@ -465,6 +467,8 @@ export class OneBotMsgApi {
                         replayMsgId: replyMsg.msgId,  // raw.msgId
                         senderUin: replyMsg.senderUin,
                         senderUinStr: replyMsg.senderUin,
+                        replyMsgClientSeq: replyMsg.clientSeq,
+                        _replyMsgPeer: replyMsgM.Peer
                     },
                 } :
                 undefined;
@@ -554,7 +558,7 @@ export class OneBotMsgApi {
         },
 
         [OB11MessageDataType.voice]: async (sendMsg, context) =>
-            this.core.apis.FileApi.createValidSendPttElement(
+            this.core.apis.FileApi.createValidSendPttElement(context,
                 (await this.handleOb11FileLikeMessage(sendMsg, context)).path),
 
         [OB11MessageDataType.json]: async ({ data: { data } }) => ({
@@ -712,6 +716,56 @@ export class OneBotMsgApi {
         this.obContext = obContext;
         this.core = core;
     }
+    /**
+     * 解析带有JSON标记的文本
+     * @param text 要解析的文本
+     * @returns 解析后的结果数组，每个元素包含类型(text或json)和内容
+     */
+    parseTextWithJson(text: string) {
+        // 匹配<{...}>格式的JSON
+        const regex = /<(\{.*?\})>/g;
+        const parts: Array<{ type: 'text' | 'json', content: string | object }> = [];
+        let lastIndex = 0;
+        let match;
+
+        // 查找所有匹配项
+        while ((match = regex.exec(text)) !== null) {
+            // 添加匹配前的文本
+            if (match.index > lastIndex) {
+                parts.push({
+                    type: 'text',
+                    content: text.substring(lastIndex, match.index)
+                });
+            }
+
+            // 添加JSON部分
+            try {
+                const jsonContent = JSON.parse(match[1] ?? '');
+                parts.push({
+                    type: 'json',
+                    content: jsonContent
+                });
+            } catch (e) {
+                // 如果JSON解析失败，作为普通文本处理
+                parts.push({
+                    type: 'text',
+                    content: match[0]
+                });
+            }
+
+            lastIndex = regex.lastIndex;
+        }
+
+        // 添加最后一部分文本
+        if (lastIndex < text.length) {
+            parts.push({
+                type: 'text',
+                content: text.substring(lastIndex)
+            });
+        }
+
+        return parts;
+    }
 
     async parsePrivateMsgEvent(msg: RawMessage, grayTipElement: GrayTipElement) {
         if (grayTipElement.subElementType == NTGrayTipElementSubTypeV2.GRAYTIP_ELEMENT_SUBTYPE_JSON) {
@@ -855,10 +909,10 @@ export class OneBotMsgApi {
             const member = await this.core.apis.GroupApi.getGroupMember(msg.peerUin, msg.senderUin);
             resMsg.group_id = parseInt(ret.tmpChatInfo!.groupCode);
             resMsg.sender.nickname = member?.nick ?? member?.cardName ?? '临时会话';
-            resMsg.temp_source = resMsg.group_id;
+            resMsg.temp_source = 0;
         } else {
             resMsg.group_id = 284840486;
-            resMsg.temp_source = resMsg.group_id;
+            resMsg.temp_source = 0;
             resMsg.sender.nickname = '临时会话';
         }
     }
@@ -970,7 +1024,6 @@ export class OneBotMsgApi {
         });
 
         const timeout = 10000 + (totalSize / 1024 / 256 * 1000);
-
         try {
             const returnMsg = await this.core.apis.MsgApi.sendMsg(peer, sendElements, timeout);
             if (!returnMsg) throw new Error('发送消息失败');
@@ -983,18 +1036,19 @@ export class OneBotMsgApi {
         } catch (error) {
             throw new Error((error as Error).message);
         } finally {
-            setTimeout(async () => {
-                const deletePromises = deleteAfterSentFiles.map(async file => {
-                    try {
-                        if (await fsPromise.access(file, constants.W_OK).then(() => true).catch(() => false)) {
-                            await fsPromise.unlink(file);
-                        }
-                    } catch (e) {
-                        this.core.context.logger.logError('发送消息删除文件失败', e);
-                    }
-                });
-                await Promise.all(deletePromises);
-            }, 60000);
+            cleanTaskQueue.addFiles(deleteAfterSentFiles, timeout);
+            // setTimeout(async () => {
+            //     const deletePromises = deleteAfterSentFiles.map(async file => {
+            //         try {
+            //             if (await fsPromise.access(file, constants.W_OK).then(() => true).catch(() => false)) {
+            //                 await fsPromise.unlink(file);
+            //             }
+            //         } catch (e) {
+            //             this.core.context.logger.logError('发送消息删除文件失败', e);
+            //         }
+            //     });
+            //     await Promise.all(deletePromises);
+            // }, 60000);
         }
     }
 
@@ -1053,6 +1107,8 @@ export class OneBotMsgApi {
                 return 'kick';
             case 3:
                 return 'kick_me';
+            case 129:
+                return 'disband';
             default:
                 return 'kick';
         }
@@ -1213,6 +1269,41 @@ export class OneBotMsgApi {
         } else if (SysMessage.contentHead.type == 528 && SysMessage.contentHead.subType == 39 && SysMessage.body?.msgContent) {
             return await this.obContext.apis.UserApi.parseLikeEvent(SysMessage.body?.msgContent);
         }
+        // else if (SysMessage.contentHead.type == 732 && SysMessage.contentHead.subType == 16 && SysMessage.body?.msgContent) {
+        //     let data_wrap = PBString(2);
+        //     let user_wrap = PBUint64(5);
+        //     let group_wrap = PBUint64(4);
+
+        //     ProtoBuf(class extends ProtoBufBase {
+        //         group = group_wrap;
+        //         content = ProtoBufIn(5, { data: data_wrap, user: user_wrap });
+        //     }).decode(SysMessage.body?.msgContent.slice(7));
+        //     let xml_data = UnWrap(data_wrap);
+        //     let group = UnWrap(group_wrap).toString();
+        //     //let user = UnWrap(user_wrap).toString();
+        //     const parsedParts = this.parseTextWithJson(xml_data);
+        //     //解析JSON
+        //     if (parsedParts[1] && parsedParts[3]) {
+        //         let set_user_id: string = (parsedParts[1].content as { data: string }).data;
+        //         let uid = await this.core.apis.UserApi.getUidByUinV2(set_user_id);
+        //         let new_title: string = (parsedParts[3].content as { text: string }).text;
+        //         console.log(this.core.apis.GroupApi.groupMemberCache.get(group)?.get(uid)?.memberSpecialTitle, new_title)
+        //         if (this.core.apis.GroupApi.groupMemberCache.get(group)?.get(uid)?.memberSpecialTitle == new_title) {
+        //             return;
+        //         }
+        //         await this.core.apis.GroupApi.refreshGroupMemberCachePartial(group, uid);
+        //         //let json_data_1_url_search = new URL((parsedParts[3].content as { url: string }).url).searchParams;
+        //         //let is_new: boolean = json_data_1_url_search.get('isnew') === '1';
+
+        //         //console.log(group, set_user_id, is_new, new_title);
+        //         return new GroupMemberTitle(
+        //             this.core,
+        //             +group,
+        //             +set_user_id,
+        //             new_title
+        //         );
+        //     }
+        // }
         return undefined;
     }
 }
