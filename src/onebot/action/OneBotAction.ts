@@ -4,7 +4,9 @@ import { NapCatCore } from '@/core';
 import { NapCatOneBot11Adapter, OB11Return } from '@/onebot';
 import { NetworkAdapterConfig } from '../config/config';
 import { TSchema } from '@sinclair/typebox';
-
+export interface OneBotRuntimeContext {
+    protocol_new: boolean;
+}
 export class OB11Response {
     private static createResponse<T>(data: T, status: string, retcode: number, message: string = '', echo: unknown = null): OB11Return<T> {
         return {
@@ -57,13 +59,18 @@ export abstract class OneBotAction<PayloadType, ReturnDataType> {
         return { valid: true };
     }
 
-    public async handle(payload: PayloadType, adaptername: string, config: NetworkAdapterConfig): Promise<OB11Return<ReturnDataType | null>> {
+    public async handle(
+        payload: PayloadType,
+        adaptername: string,
+        config: NetworkAdapterConfig,
+        runtime: OneBotRuntimeContext = { protocol_new: false }
+    ): Promise<OB11Return<ReturnDataType | null>> {
         const result = await this.check(payload);
         if (!result.valid) {
             return OB11Response.error(result.message, 400);
         }
         try {
-            const resData = await this._handle(payload, adaptername, config);
+            const resData = await this._handle(payload, adaptername, config, runtime);
             return OB11Response.ok(resData);
         } catch (e: unknown) {
             this.core.context.logger.logError('发生错误', e);
@@ -71,13 +78,19 @@ export abstract class OneBotAction<PayloadType, ReturnDataType> {
         }
     }
 
-    public async websocketHandle(payload: PayloadType, echo: unknown, adaptername: string, config: NetworkAdapterConfig): Promise<OB11Return<ReturnDataType | null>> {
+    public async websocketHandle(
+        payload: PayloadType,
+        echo: unknown,
+        adaptername: string,
+        config: NetworkAdapterConfig,
+        runtime: OneBotRuntimeContext
+    ): Promise<OB11Return<ReturnDataType | null>> {
         const result = await this.check(payload);
         if (!result.valid) {
             return OB11Response.error(result.message, 1400, echo);
         }
         try {
-            const resData = await this._handle(payload, adaptername, config);
+            const resData = await this._handle(payload, adaptername, config, runtime);
             return OB11Response.ok(resData, echo);
         } catch (e: unknown) {
             this.core.context.logger.logError('发生错误', e);
@@ -85,5 +98,5 @@ export abstract class OneBotAction<PayloadType, ReturnDataType> {
         }
     }
 
-    abstract _handle(payload: PayloadType, adaptername: string, config: NetworkAdapterConfig): Promise<ReturnDataType>;
+    abstract _handle(payload: PayloadType, adaptername: string, config: NetworkAdapterConfig, runtime: OneBotRuntimeContext): Promise<ReturnDataType>;
 }

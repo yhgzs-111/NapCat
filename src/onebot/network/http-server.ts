@@ -116,12 +116,16 @@ export class OB11HttpServerAdapter extends IOB11NetworkAdapter<HttpServerConfig>
             hello.message = 'NapCat4 Is Running';
             return res.json(hello);
         }
-        const actionName = req.path.split('/')[1];
+        let actionName = req.path.split('/')[1];
+        const isV2 = actionName === 'v2'
+        actionName = isV2 ? actionName = req.path.split('/')[2] : actionName;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const action = this.actions.get(actionName as any);
         if (action) {
             try {
-                const result = await action.handle(payload, this.name, this.config);
+                const result = await action.handle(payload, this.name, this.config, {
+                    protocol_new: isV2
+                });
                 return res.json(result);
             } catch (error: unknown) {
                 return res.json(OB11Response.error((error as Error)?.stack?.toString() || (error as Error)?.message || 'Error Handle', 200));
@@ -130,6 +134,7 @@ export class OB11HttpServerAdapter extends IOB11NetworkAdapter<HttpServerConfig>
             return res.json(OB11Response.error('不支持的Api ' + actionName, 200));
         }
     }
+
 
     async handleRequest(req: Request, res: Response) {
         if (!this.isEnable) {
